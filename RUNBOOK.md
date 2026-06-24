@@ -12,7 +12,8 @@ prompts see [prompts/](prompts/).
 - **Env vars** in the repo-root `.env` (auto-loaded):
   - `DATABASE_URL` — Postgres connection (Railway). ✅
   - `OPENROUTER_API_KEY` — scoring; needed by `score` and `advance`. 🚧
-  - `YOUTUBE_API_KEY` — comment ingest; needed by `ingest`. ⬜
+  - `YOUTUBE_API_KEY` — comment ingest; needed by `ingest`. ✅
+  - `EXCLUDED_CHANNELS` — optional; comma-separated `@handles` / `UC…` ids to exclude (owner, mods).
 - **Database migrated:** `bun run db:migrate`. (Schema changes: the maintainer runs
   `db:generate` + `db:migrate` — do not run them automatically.)
 
@@ -30,11 +31,20 @@ prompts see [prompts/](prompts/).
 Run these in sequence for one contest. **Every command is resume-safe** — re-running picks
 up where it left off (completed work is skipped via unique constraints).
 
-### 1. Create the contest ⬜
+### 1. Create the contest ✅
 
-Register the video id, snapshot time, keywords, and pinned config. _(Command TBD.)_
+Put this contest's keywords and salt in a gitignored secrets file `secrets/<videoId>.json`
+(format in `secrets/example.json`), then:
 
-### 2. Snapshot the comments 🚧
+```bash
+bun run worker create --video <id> --published-at <iso> [--delay-hours 168] [--snapshot-at <iso>]
+```
+
+Computes a salted hash of the keywords and stores **only the hash** on the contest — the
+words stay uncommitted yet verifiable after the reveal. `snapshot-at` defaults to
+`published-at + delay-hours` (168h). Prints the new contest id used by later steps.
+
+### 2. Snapshot the comments ✅
 
 ```
 bun run worker ingest --contest <id>     # snapshot one contest manually
@@ -42,8 +52,9 @@ bun run worker ingest --due              # cron mode: snapshot any contest past 
 ```
 
 Fetches all top-level comments, validates each (length 50–1,000, all 3 keywords, no URLs,
-one-per-channel, no affiliated accounts), and freezes them as `entry` rows. Run at or just
-after the 168h cutoff.
+one-per-channel by earliest timestamp), and freezes them as `entry` rows — eligible and
+disqualified-with-reason. Run at or just after the 168h cutoff. Affiliated accounts to
+exclude come from `EXCLUDED_CHANNELS` (handles resolved to channel ids via the API).
 
 ### 3. Score the field 🚧
 

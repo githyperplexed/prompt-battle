@@ -3,6 +3,10 @@
 .env.local
 *.key
 
+# Per-contest keyword secrets — only the salted hash is committed (via `worker create`)
+secrets/*
+!secrets/example.json
+
 # Node
 node_modules/
 dist/

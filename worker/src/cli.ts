@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 
 import { pool } from "@prompt-battle/db";
 
-const COMMANDS = ["ingest", "score", "advance", "smoke"] as const;
+const COMMANDS = ["create", "ingest", "score", "advance", "smoke"] as const;
 type Command = (typeof COMMANDS)[number];
 
 const main = async () => {
@@ -13,11 +13,18 @@ const main = async () => {
 	const command = positionals[0] as Command | undefined;
 
 	switch (command) {
-		case "ingest":
-			console.log(
-				"[ingest] stub — snapshots YouTube comments into entries (--contest <id> | --due)"
-			);
+		case "create": {
+			const { runCreate } = await import("./create");
+
+			await runCreate();
 			break;
+		}
+		case "ingest": {
+			const { runIngest } = await import("./ingest");
+
+			await runIngest();
+			break;
+		}
 		case "score":
 			console.log("[score] stub — runs the absolute scoring pass");
 			break;
