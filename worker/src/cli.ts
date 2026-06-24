@@ -25,9 +25,12 @@ const main = async () => {
 			await runIngest();
 			break;
 		}
-		case "score":
-			console.log("[score] stub — runs the absolute scoring pass");
+		case "score": {
+			const { runScore } = await import("./score");
+
+			await runScore();
 			break;
+		}
 		case "advance":
 			console.log("[advance] stub — runs the bracket");
 			break;

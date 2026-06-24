@@ -29,13 +29,13 @@ const loadTemplate = (file: string): Sections => {
 const scoreTemplate = loadTemplate("judge-score.md");
 const compareTemplate = loadTemplate("judge-compare.md");
 
-export const buildScoreMessages = (entryText: string): Sections => {
+export const buildScoreMessages = (entryText: string): Sections & { nonce: string } => {
 	const nonce = makeNonce();
 	const user = replaceTokens(scoreTemplate.user.split("{{NONCE}}").join(nonce), {
 		"{{ENTRY_TEXT}}": entryText
 	});
 
-	return { system: scoreTemplate.system, user };
+	return { system: scoreTemplate.system, user, nonce };
 };
 
 export const buildCompareMessages = (entryA: string, entryB: string): Sections => {

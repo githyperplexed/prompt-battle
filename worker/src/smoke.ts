@@ -11,7 +11,7 @@ export const runSmoke = async () => {
 	console.log("Scoring a sample entry across the panel:\n");
 
 	for (const m of panel) {
-		const score = await scoreEntry(m.slug, SAMPLE_A);
+		const { score } = await scoreEntry(m.slug, SAMPLE_A);
 		console.log(`  ${m.id} (${m.slug}):`, score);
 	}
 

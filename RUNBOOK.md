@@ -11,8 +11,9 @@ prompts see [prompts/](prompts/).
 - **Bun** installed; run `bun install` at the repo root.
 - **Env vars** in the repo-root `.env` (auto-loaded):
   - `DATABASE_URL` — Postgres connection (Railway). ✅
-  - `OPENROUTER_API_KEY` — scoring; needed by `score` and `advance`. 🚧
+  - `OPENROUTER_API_KEY` — scoring; needed by `score` and `advance`. ✅
   - `YOUTUBE_API_KEY` — comment ingest; needed by `ingest`. ✅
+  - `OPENAI_API_KEY` — content moderation at ingest; needed by `ingest`. ✅
   - `EXCLUDED_CHANNELS` — optional; comma-separated `@handles` / `UC…` ids to exclude (owner, mods).
 - **Database migrated:** `bun run db:migrate`. (Schema changes: the maintainer runs
   `db:generate` + `db:migrate` — do not run them automatically.)
@@ -52,11 +53,12 @@ bun run worker ingest --due              # cron mode: snapshot any contest past 
 ```
 
 Fetches all top-level comments, validates each (length 50–1,000, all 3 keywords, no URLs,
-one-per-channel by earliest timestamp), and freezes them as `entry` rows — eligible and
-disqualified-with-reason. Run at or just after the 168h cutoff. Affiliated accounts to
-exclude come from `EXCLUDED_CHANNELS` (handles resolved to channel ids via the API).
+one-per-channel by earliest timestamp, OpenAI content moderation → `tos`), and freezes them
+as `entry` rows — eligible and disqualified-with-reason. Run at or just after the 168h
+cutoff. Affiliated accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to
+channel ids via the API).
 
-### 3. Score the field 🚧
+### 3. Score the field ✅
 
 ```
 bun run worker score --contest <id>
@@ -64,7 +66,8 @@ bun run worker score --contest <id>
 
 Scores every eligible entry once per model (3 models), in isolation, storing per-model
 rubric scores. ~10k × 3 calls — the bulk of the cost. Resume-safe via the unique
-`(entry, model)` constraint.
+`(entry, model)` constraint; runs ≤10 concurrent at ≤5 req/s, caches the judge prompt, and
+logs-and-continues past individual failures.
 
 ### 4. Run the bracket 🚧
 

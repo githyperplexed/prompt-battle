@@ -3,6 +3,7 @@ import { contest, db, entry, eq } from "@prompt-battle/db";
 import { MAX_ENTRIES } from "../constants";
 import { classifyComment, countCharacters } from "../utilities/validation";
 import { resolveExcludedChannels } from "./excluded";
+import { flagViolations } from "./moderation";
 import { loadKeywordSecret } from "./secrets";
 import { fetchAllComments } from "./youtube";
 
@@ -28,29 +29,42 @@ export const snapshotContest = async (contestId: string) => {
 	// Earliest first: drives "first eligible per channel" and "first 10k by timestamp".
 	comments.sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
 
+	const flags = await flagViolations(comments.map((c) => c.text));
+	const flagged = new Set<string>();
+
+	comments.forEach((c, i) => {
+		if (flags[i]) flagged.add(c.commentId);
+	});
+
 	const countedChannels = new Set<string>();
 	const rows: EntryInsert[] = [];
 
 	let eligible = 0;
 
 	for (const comment of comments) {
-		const verdict = classifyComment(comment, { keywords: secret.keywords, excluded });
-
 		let status: "eligible" | "disqualified";
 		let reason: EntryInsert["dqReason"] = null;
 
-		if (!verdict.eligible) {
+		// Content-policy violations take precedence so flagged text never advances or counts.
+		if (flagged.has(comment.commentId)) {
 			status = "disqualified";
-			reason = verdict.reason;
-		} else if (countedChannels.has(comment.channelId)) {
-			status = "disqualified";
-			reason = "duplicate_channel";
-		} else if (eligible >= MAX_ENTRIES) {
-			continue;
+			reason = "tos";
 		} else {
-			status = "eligible";
-			countedChannels.add(comment.channelId);
-			eligible += 1;
+			const verdict = classifyComment(comment, { keywords: secret.keywords, excluded });
+
+			if (!verdict.eligible) {
+				status = "disqualified";
+				reason = verdict.reason;
+			} else if (countedChannels.has(comment.channelId)) {
+				status = "disqualified";
+				reason = "duplicate_channel";
+			} else if (eligible >= MAX_ENTRIES) {
+				continue;
+			} else {
+				status = "eligible";
+				countedChannels.add(comment.channelId);
+				eligible += 1;
+			}
 		}
 
 		rows.push({
