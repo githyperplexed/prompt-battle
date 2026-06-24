@@ -149,7 +149,7 @@ max score" doesn't trivially work — a naked override is, by definition, unorig
   the same entry regardless of order. The **majority of model votes wins** the matchup.
 - **Pairwise ties** (a deadlock) are broken in favor of the **higher seed**.
 
-The top-64 cut is configurable per contest and published in `config.json`.
+The top-64 cut is a fixed engine constant (see `worker/src/constants.ts`).
 
 ### 7.6 Tie-breaks
 
@@ -161,8 +161,7 @@ seeding), they are ordered by:
 3. **Earlier snapshot timestamp** (first to post wins).
 
 A deadlocked **matchup** is broken in favor of the higher seed (above), so the bracket
-always resolves to a single winner. In the astronomically unlikely event the final
-cannot be separated, the prize is shared.
+always resolves to a single winner.
 
 ---
 
@@ -182,8 +181,8 @@ the prize passes to the runner-up.
 
 Because this repo is public, the contest is designed to be **independently verifiable:**
 
-- **Pinned models & settings.** Exact model versions and rubric are
-  committed in `config.json` before the snapshot.
+- **Pinned models & settings.** The model panel is committed in `config.json`, and the
+  rubric lives in the judge prompts (`prompts/`), both fixed before the snapshot.
 - **Full logs.** Every entry, every per-model score, and every pairwise decision is
   published after the contest.
 
