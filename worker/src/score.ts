@@ -24,4 +24,18 @@ export const runScore = async () => {
 	console.log(`  calls:     ${result.total}`);
 	console.log(`  completed: ${result.completed}`);
 	console.log(`  failed:    ${result.failed}`);
+
+	if (!result.complete) {
+		console.error(
+			"Scoring is incomplete; " + result.missing.length + " expected score(s) are missing."
+		);
+
+		if (result.unexpected.length > 0) {
+			console.error(
+				"Found " + result.unexpected.length + " score(s) from unexpected panel model(s)."
+			);
+		}
+
+		process.exitCode = 1;
+	}
 };

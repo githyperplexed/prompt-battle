@@ -3,7 +3,7 @@ import Bottleneck from "bottleneck";
 import { contest, db, eq, score } from "@prompt-battle/db";
 
 import { panel } from "$src/config";
-import { buildWorkList } from "$src/utilities/scoring";
+import { auditScoreCoverage, buildWorkList } from "$src/utilities/scoring";
 import { scoreEntry } from "$src/services/judge";
 
 // ≤10 in flight, and a new request started at most every 200ms (5 req/s).
@@ -29,17 +29,17 @@ const loadEligibleEntries = (contestId: string) =>
 		columns: { id: true, text: true }
 	});
 
-const loadScoredPairs = async (contestId: string): Promise<Set<string>> => {
-	const rows = await db
+const loadScoredPairs = (contestId: string) =>
+	db
 		.select({ entryId: score.entryId, modelId: score.modelId })
 		.from(score)
 		.where(eq(score.contestId, contestId));
 
-	return new Set(rows.map((row) => `${row.entryId}:${row.modelId}`));
-};
-
 const markScoring = (contestId: string) =>
 	db.update(contest).set({ status: "scoring" }).where(eq(contest.id, contestId));
+
+const markScored = (contestId: string) =>
+	db.update(contest).set({ status: "scored" }).where(eq(contest.id, contestId));
 
 const scoreAndStore = async (contestId: string, entry: Entry, model: Model) => {
 	const { score: result, nonce } = await scoreEntry(model.slug, entry.text);
@@ -92,12 +92,24 @@ export const scoreContest = async (contestId: string) => {
 	}
 
 	const entries = await loadEligibleEntries(contestId);
-	const done = await loadScoredPairs(contestId);
+	const scored = await loadScoredPairs(contestId);
+	const done = new Set(scored.map((row) => row.entryId + ":" + row.modelId));
 	const work = buildWorkList(entries, panel, done);
 
 	await markScoring(contestId);
 
 	const { completed, failed } = await runScoring(contestId, work);
+	const coverage = auditScoreCoverage(entries, panel, await loadScoredPairs(contestId));
 
-	return { skipped: false as const, total: work.length, completed, failed };
+	if (coverage.complete) await markScored(contestId);
+
+	return {
+		skipped: false as const,
+		total: work.length,
+		completed,
+		failed,
+		complete: coverage.complete,
+		missing: coverage.missing,
+		unexpected: coverage.unexpected
+	};
 };

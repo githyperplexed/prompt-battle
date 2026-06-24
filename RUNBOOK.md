@@ -66,8 +66,10 @@ bun run worker score --contest <id>
 
 Scores every eligible entry once per model (3 models), in isolation, storing per-model
 rubric scores. ~10k × 3 calls — the bulk of the cost. Resume-safe via the unique
-`(entry, model)` constraint; runs ≤10 concurrent at ≤5 req/s, caches the judge prompt, and
-logs-and-continues past individual failures.
+`(entry, model)` constraint; runs ≤10 concurrent at ≤5 req/s and caches the judge prompt.
+Individual failures leave the contest in `scoring` and make the command exit nonzero; re-run
+until every eligible entry has exactly one score from each panel model and the contest reaches
+`scored`.
 
 ### 4. Run the bracket ✅
 

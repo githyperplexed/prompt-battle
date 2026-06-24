@@ -57,6 +57,10 @@ print width.** Don't fight it by hand.
 
 ## Commits
 
+**Never commit, push, create a pull request, or otherwise publish changes unless the user
+explicitly requests that action.** Approval to implement or edit files is not approval to
+commit or publish them.
+
 - One logical change per commit; keep the diff focused.
 - Subject: imperative mood, present tense, concise (≤ ~70 chars), no trailing period —
   e.g. `add db package skeleton`.

@@ -11,6 +11,7 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
+		"test": "bun test",
 		"db:generate": "bun run --filter @prompt-battle/db db:generate",
 		"db:migrate": "bun run --filter @prompt-battle/db db:migrate",
 		"db:push": "bun run --filter @prompt-battle/db db:push",

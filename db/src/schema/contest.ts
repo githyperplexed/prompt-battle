@@ -6,6 +6,7 @@ export const contestStatus = pgEnum("contest_status", [
 	"open",
 	"snapshotted",
 	"scoring",
+	"scored",
 	"complete"
 ]);
 

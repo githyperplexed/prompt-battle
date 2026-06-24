@@ -244,7 +244,7 @@ export const advanceContest = async (contestId: string) => {
 
 	if (!target) throw new Error(`No contest with id ${contestId}`);
 
-	if (target.status !== "scoring" && target.status !== "complete") {
+	if (target.status !== "scored") {
 		return { skipped: true as const, status: target.status };
 	}
 

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."contest_status" ADD VALUE 'scored' BEFORE 'complete';
