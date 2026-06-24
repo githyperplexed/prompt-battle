@@ -8,7 +8,7 @@ import { pool } from "@prompt-battle/db";
 const COMMANDS = ["ingest", "score", "advance", "smoke"] as const;
 type Command = (typeof COMMANDS)[number];
 
-async function main() {
+const main = async () => {
 	const { positionals } = parseArgs({ allowPositionals: true, strict: false });
 	const command = positionals[0] as Command | undefined;
 
@@ -27,6 +27,7 @@ async function main() {
 		case "smoke": {
 			// Lazy import so only this path requires OPENROUTER_API_KEY (ingest must not).
 			const { runSmoke } = await import("./smoke");
+
 			await runSmoke();
 			break;
 		}
@@ -34,7 +35,7 @@ async function main() {
 			console.log(`Usage: worker <${COMMANDS.join(" | ")}>`);
 			if (command) process.exitCode = 1;
 	}
-}
+};
 
 // Every command exits cleanly by closing the pool — Railway's cron skips overlapping runs,
 // so the process must terminate to free the next scheduled tick.

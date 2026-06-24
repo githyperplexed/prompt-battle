@@ -1,11 +1,11 @@
 import { generateText, Output } from "ai";
 
-import { model } from "./models";
+import { compareSchema, scoreSchema, type Comparison, type Score } from "../schemas";
+import { clampScore } from "../utilities/score";
 import { buildCompareMessages, buildScoreMessages } from "./prompts";
-import { clampScore, compareSchema, scoreSchema, type Comparison, type Score } from "./schemas";
+import { model } from "./models";
 
-/** Score one entry in isolation with the given model slug. */
-export async function scoreEntry(slug: string, entryText: string): Promise<Score> {
+export const scoreEntry = async (slug: string, entryText: string): Promise<Score> => {
 	const { system, user } = buildScoreMessages(entryText);
 	const { output } = await generateText({
 		model: model(slug),
@@ -13,15 +13,15 @@ export async function scoreEntry(slug: string, entryText: string): Promise<Score
 		prompt: user,
 		output: Output.object({ schema: scoreSchema })
 	});
-	return clampScore(output);
-}
 
-/** Compare two entries head-to-head; returns the preferred positional entry (A or B). */
-export async function compareEntries(
+	return clampScore(output);
+};
+
+export const compareEntries = async (
 	slug: string,
 	entryA: string,
 	entryB: string
-): Promise<Comparison> {
+): Promise<Comparison> => {
 	const { system, user } = buildCompareMessages(entryA, entryB);
 	const { output } = await generateText({
 		model: model(slug),
@@ -29,5 +29,6 @@ export async function compareEntries(
 		prompt: user,
 		output: Output.object({ schema: compareSchema })
 	});
+
 	return output;
-}
+};
