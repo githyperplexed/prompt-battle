@@ -1,0 +1,15 @@
+node_modules
+bun.lock
+bun.lockb
+dist
+build
+.svelte-kit
+
+# Tool-managed
+.claude
+
+# Drizzle-generated migrations + metadata
+db/drizzle
+
+# Human-authored doc — keep manual formatting (tables, emphasis)
+rules.md

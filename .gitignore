@@ -1,0 +1,20 @@
+# Local env / keys
+.env
+.env.local
+*.key
+
+# Node
+node_modules/
+dist/
+.svelte-kit/
+build/
+
+# Tooling (local/personal)
+.claude/settings.local.json
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
