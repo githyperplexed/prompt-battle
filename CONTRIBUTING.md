@@ -22,6 +22,11 @@ print width.** Don't fight it by hand.
 
 ## Manual conventions (Prettier can't enforce these)
 
+- **`services/` vs `utilities/`.** In each package, pure logic — deterministic, no I/O
+  (transforms, validation, parsing, hashing, building request payloads) — goes in
+  `utilities/`. Anything that performs or orchestrates I/O — database, network/API,
+  filesystem, env — goes in `services/`. Services may call utilities; utilities never import
+  services. CLI / command files stay thin and delegate to services.
 - **Tailwind classes:** always compose with the `cn()` helper (clsx + tailwind-merge).
   Never raw string concatenation or bare template literals for class lists.
 - **Imports:** group logically — built-ins, then third-party, then internal (`@prompt-battle/db`
