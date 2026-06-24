@@ -1,8 +1,10 @@
 import { parseArgs } from "node:util";
 
-import { panel } from "$src/config";
+import { defaultPanel } from "$src/services/config";
 import { createContest } from "$src/services/contests";
+import { defaultPromptTemplates } from "$src/services/prompts";
 import { loadKeywordSecret } from "$src/services/secrets";
+import { createContestConfig } from "$src/utilities/contest-config";
 import { keywordHash } from "$src/utilities/keywords";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -44,16 +46,23 @@ export const runCreate = async () => {
 
 	const secret = loadKeywordSecret(videoId);
 	const hash = keywordHash(secret.keywords, secret.salt);
+	const config = createContestConfig({
+		keywordHash: hash,
+		panel: defaultPanel,
+		prompts: defaultPromptTemplates
+	});
 
 	const created = await createContest({
 		videoId,
 		videoPublishedAt,
 		snapshotAt,
-		config: { keywordHash: hash, panel }
+		config
 	});
 
 	console.log(`Created contest ${created.id}`);
 	console.log(`  video:        ${created.videoId}`);
 	console.log(`  snapshot at:  ${created.snapshotAt.toISOString()}`);
-	console.log(`  keyword hash: ${hash}`);
+	console.log(`  keyword hash:  ${hash}`);
+	console.log(`  score prompt:  ${config.prompts.score.hash}`);
+	console.log(`  compare prompt: ${config.prompts.compare.hash}`);
 };

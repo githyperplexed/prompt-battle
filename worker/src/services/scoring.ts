@@ -2,7 +2,11 @@ import Bottleneck from "bottleneck";
 
 import { contest, db, eq, score } from "@prompt-battle/db";
 
-import { panel } from "$src/config";
+import {
+	parseContestConfig,
+	type ContestConfig,
+	type PromptTemplate
+} from "$src/utilities/contest-config";
 import { auditScoreCoverage, buildWorkList } from "$src/utilities/scoring";
 import { scoreEntry } from "$src/services/judge";
 
@@ -10,17 +14,17 @@ import { scoreEntry } from "$src/services/judge";
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });
 
 type Entry = { id: string; text: string };
-type Model = (typeof panel)[number];
+type Model = ContestConfig["panel"][number];
 
 const loadContest = async (contestId: string) => {
 	const target = await db.query.contest.findFirst({
 		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { id: true, status: true }
+		columns: { id: true, status: true, config: true }
 	});
 
 	if (!target) throw new Error(`No contest with id ${contestId}`);
 
-	return target;
+	return { ...target, config: parseContestConfig(target.config) };
 };
 
 const loadEligibleEntries = (contestId: string) =>
@@ -41,8 +45,13 @@ const markScoring = (contestId: string) =>
 const markScored = (contestId: string) =>
 	db.update(contest).set({ status: "scored" }).where(eq(contest.id, contestId));
 
-const scoreAndStore = async (contestId: string, entry: Entry, model: Model) => {
-	const { score: result, nonce } = await scoreEntry(model.slug, entry.text);
+const scoreAndStore = async (
+	contestId: string,
+	entry: Entry,
+	model: Model,
+	prompt: PromptTemplate
+) => {
+	const { score: result, nonce } = await scoreEntry(model.slug, entry.text, prompt);
 
 	await db
 		.insert(score)
@@ -60,7 +69,11 @@ const scoreAndStore = async (contestId: string, entry: Entry, model: Model) => {
 		.onConflictDoNothing();
 };
 
-const runScoring = async (contestId: string, work: { entry: Entry; model: Model }[]) => {
+const runScoring = async (
+	contestId: string,
+	work: { entry: Entry; model: Model }[],
+	prompt: PromptTemplate
+) => {
 	let completed = 0;
 	let failed = 0;
 
@@ -68,7 +81,7 @@ const runScoring = async (contestId: string, work: { entry: Entry; model: Model 
 		work.map((item) =>
 			limiter.schedule(async () => {
 				try {
-					await scoreAndStore(contestId, item.entry, item.model);
+					await scoreAndStore(contestId, item.entry, item.model, prompt);
 					completed += 1;
 				} catch (err) {
 					failed += 1;
@@ -94,12 +107,16 @@ export const scoreContest = async (contestId: string) => {
 	const entries = await loadEligibleEntries(contestId);
 	const scored = await loadScoredPairs(contestId);
 	const done = new Set(scored.map((row) => row.entryId + ":" + row.modelId));
-	const work = buildWorkList(entries, panel, done);
+	const work = buildWorkList(entries, target.config.panel, done);
 
 	await markScoring(contestId);
 
-	const { completed, failed } = await runScoring(contestId, work);
-	const coverage = auditScoreCoverage(entries, panel, await loadScoredPairs(contestId));
+	const { completed, failed } = await runScoring(contestId, work, target.config.prompts.score);
+	const coverage = auditScoreCoverage(
+		entries,
+		target.config.panel,
+		await loadScoredPairs(contestId)
+	);
 
 	if (coverage.complete) await markScored(contestId);
 

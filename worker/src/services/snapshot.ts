@@ -1,6 +1,8 @@
 import { contest, db, entry, eq } from "@prompt-battle/db";
 
 import { MAX_ENTRIES } from "$src/constants";
+import { parseContestConfig } from "$src/utilities/contest-config";
+import { matchesKeywordHash } from "$src/utilities/keywords";
 import { classifySnapshotTiming, isSnapshotDue } from "$src/utilities/snapshot";
 import { classifyComment, countCharacters } from "$src/utilities/validation";
 import { resolveExcludedChannels } from "$src/services/excluded";
@@ -23,6 +25,7 @@ export const snapshotContest = async (contestId: string) => {
 		return { skipped: true as const, status: target.status };
 	}
 
+	const config = parseContestConfig(target.config);
 	const capturedAt = new Date();
 
 	if (!isSnapshotDue(target.snapshotAt, capturedAt)) {
@@ -32,6 +35,11 @@ export const snapshotContest = async (contestId: string) => {
 	}
 
 	const secret = loadKeywordSecret(target.videoId);
+
+	if (!matchesKeywordHash(secret.keywords, secret.salt, config.keywordHash)) {
+		throw new Error("Keyword secret does not match the commitment stored for contest " + contestId);
+	}
+
 	const excluded = await resolveExcludedChannels();
 	const fetched = await fetchAllComments(target.videoId);
 	const comments = fetched.filter(

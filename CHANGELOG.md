@@ -149,6 +149,17 @@ This completed the worker pipeline: **create → ingest → score → advance.**
 
 ---
 
+## Phase 13 — Contest input pinning
+
+Made the contest record authoritative for every judging input. Creation now stores a
+versioned configuration containing the exact three-provider panel and full score/compare
+prompt templates with integrity hashes. Scoring, completeness checks, and bracket comparisons
+all use that stored configuration rather than live repo defaults. Ingest verifies the local
+keyword secret against the contest's committed hash before external API work. Malformed,
+tampered, or legacy unversioned configuration fails closed with no fallback.
+
+---
+
 ## Notable cross-cutting decisions
 
 - **Resume everywhere.** Every command is idempotent and re-runnable; progress is checkpointed

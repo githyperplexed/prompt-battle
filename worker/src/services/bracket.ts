@@ -2,8 +2,8 @@ import Bottleneck from "bottleneck";
 
 import { comparison, contest, db, entry, eq, matchup, score } from "@prompt-battle/db";
 
-import { panel } from "$src/config";
 import { BRACKET_SIZE } from "$src/constants";
+import { parseContestConfig, type ContestConfig } from "$src/utilities/contest-config";
 import { nextPowerOfTwo, seedOrder, tallyMatchup } from "$src/utilities/bracket";
 import { aggregateTotals, rankEntries } from "$src/utilities/ranking";
 import { compareEntries } from "$src/services/judge";
@@ -109,7 +109,8 @@ const resolveMatchup = async (
 	a: string | null,
 	b: string | null,
 	seedOfId: Map<string, number>,
-	textOfId: Map<string, string>
+	textOfId: Map<string, string>,
+	config: ContestConfig
 ): Promise<string | null> => {
 	// A bye: the present side auto-advances with no matchup row or comparisons.
 	if (!a) return b;
@@ -134,7 +135,7 @@ const resolveMatchup = async (
 
 	const doneKeys = new Set(recorded.map((c) => `${c.modelId}:${c.orderSwapped}`));
 
-	const pending = panel.flatMap((m) =>
+	const pending = config.panel.flatMap((m) =>
 		[false, true]
 			.filter((orderSwapped) => !doneKeys.has(`${m.id}:${orderSwapped}`))
 			.map((orderSwapped) => ({ model: m, orderSwapped }))
@@ -144,7 +145,7 @@ const resolveMatchup = async (
 		pending.map((p) =>
 			limiter.schedule(async () => {
 				const [first, second] = p.orderSwapped ? [textB, textA] : [textA, textB];
-				const verdict = await compareEntries(p.model.slug, first, second);
+				const verdict = await compareEntries(p.model.slug, first, second, config.prompts.compare);
 
 				// "A" is whichever entry was presented first; map back to the canonical entry.
 				const firstEntry = p.orderSwapped ? entryB : entryA;
@@ -178,7 +179,7 @@ const resolveMatchup = async (
 	return winner;
 };
 
-const runBracket = async (contestId: string, seeded: Seeded[]) => {
+const runBracket = async (contestId: string, seeded: Seeded[], config: ContestConfig) => {
 	const order = seedOrder(nextPowerOfTwo(seeded.length));
 	const idBySeed = new Map(seeded.map((s) => [s.seed, s.id]));
 	const seedOfId = new Map(seeded.map((s) => [s.id, s.seed]));
@@ -196,7 +197,9 @@ const runBracket = async (contestId: string, seeded: Seeded[]) => {
 		}
 
 		const winners = await Promise.all(
-			pairs.map((p) => resolveMatchup(contestId, round, p.slot, p.a, p.b, seedOfId, textOfId))
+			pairs.map((p) =>
+				resolveMatchup(contestId, round, p.slot, p.a, p.b, seedOfId, textOfId, config)
+			)
 		);
 
 		pairs.forEach((p, idx) => {
@@ -239,17 +242,19 @@ const finalize = async (
 export const advanceContest = async (contestId: string) => {
 	const target = await db.query.contest.findFirst({
 		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { id: true, status: true }
+		columns: { id: true, status: true, config: true }
 	});
 
 	if (!target) throw new Error(`No contest with id ${contestId}`);
+
+	const config = parseContestConfig(target.config);
 
 	if (target.status !== "scored") {
 		return { skipped: true as const, status: target.status };
 	}
 
 	const seeded = await rankAndSeed(contestId);
-	const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded);
+	const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
 
 	await finalize(contestId, champion, eliminatedRound, rounds);
 	await limiter.disconnect();

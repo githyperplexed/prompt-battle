@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { makeNonce, replaceTokens } from "$src/utilities/text";
+import type { PromptSections } from "$src/utilities/prompts";
 
-type Sections = { system: string; user: string };
-
-const loadTemplate = (file: string): Sections => {
+const loadTemplate = (file: string): PromptSections => {
 	const path = fileURLToPath(new URL(`../../../prompts/${file}`, import.meta.url));
 	// Strip HTML comments first — the header notes also contain the "## System message"
 	// and "## User message" markers, which would otherwise confuse the section split.
@@ -26,31 +24,7 @@ const loadTemplate = (file: string): Sections => {
 	return { system, user };
 };
 
-const scoreTemplate = loadTemplate("judge-score.md");
-const compareTemplate = loadTemplate("judge-compare.md");
-
-export const buildScoreMessages = (entryText: string): Sections & { nonce: string } => {
-	const nonce = makeNonce();
-	const user = replaceTokens(scoreTemplate.user.split("{{NONCE}}").join(nonce), {
-		"{{ENTRY_TEXT}}": entryText
-	});
-
-	return { system: scoreTemplate.system, user, nonce };
-};
-
-export const buildCompareMessages = (entryA: string, entryB: string): Sections => {
-	const nonceA = makeNonce();
-	let nonceB = makeNonce();
-
-	while (nonceB === nonceA) nonceB = makeNonce(); // the two markers must differ
-
-	const templated = compareTemplate.user
-		.split("{{NONCE_A}}")
-		.join(nonceA)
-		.split("{{NONCE_B}}")
-		.join(nonceB);
-	// Both entries inserted in one pass so neither's content can hit the other's token.
-	const user = replaceTokens(templated, { "{{ENTRY_A}}": entryA, "{{ENTRY_B}}": entryB });
-
-	return { system: compareTemplate.system, user };
+export const defaultPromptTemplates = {
+	score: loadTemplate("judge-score.md"),
+	compare: loadTemplate("judge-compare.md")
 };

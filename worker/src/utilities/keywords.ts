@@ -17,3 +17,9 @@ export const keywordHash = (keywords: string[], salt: string): string =>
 
 export const hasAllKeywords = (text: string, keywords: string[]): boolean =>
 	keywords.every((keyword) => new RegExp(`\\b${escapeRegExp(keyword.trim())}\\b`, "i").test(text));
+
+export const matchesKeywordHash = (
+	keywords: string[],
+	salt: string,
+	expectedHash: string
+): boolean => keywordHash(keywords, salt) === expectedHash;

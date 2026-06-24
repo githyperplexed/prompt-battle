@@ -43,8 +43,10 @@ bun run worker create --video <id> --published-at <iso> [--delay-hours 168] [--s
 ```
 
 Computes a salted hash of the keywords and stores **only the hash** on the contest — the
-words stay uncommitted yet verifiable after the reveal. `snapshot-at` defaults to
-`published-at + delay-hours` (168h). Prints the new contest id used by later steps.
+words stay uncommitted yet verifiable after the reveal. It also freezes a versioned judging
+configuration containing the three-model panel and exact score/compare prompt templates with
+their hashes. Later commands validate and use only this stored configuration. `snapshot-at`
+defaults to `published-at + delay-hours` (168h). Prints the new contest id used by later steps.
 
 ### 2. Snapshot the comments ✅
 
@@ -61,6 +63,9 @@ published after the cutoff are not entries; comments edited after it are stored 
 actual capture start is stored in `captured_at`. Run at or just after the cutoff. Affiliated
 accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to channel ids via the
 API).
+
+Before any external API call, ingest validates the stored contest configuration and verifies
+that `secrets/<videoId>.json` still produces the keyword hash committed at creation.
 
 ### 3. Score the field ✅
 

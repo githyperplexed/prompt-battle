@@ -103,9 +103,11 @@ Disqualification is based only on the captured text, YouTube timestamps, and the
 
 ### 7.1 The Panel
 
-Three **independent AI models from different providers** judge every entry. The exact
-models and versions are **pinned and published** for each contest (e.g. in
-`config.json`) so results are reproducible.
+Three **independent AI models from different providers** judge every entry. At contest
+creation, the exact panel and judge prompt templates are copied into that contest's versioned
+configuration and used for every later scoring and bracket call. Their identities and prompt
+hashes are published with the results so the judging inputs can be verified even if the repo's
+defaults change later.
 
 > **This contest's panel:** `TBD`
 
@@ -187,8 +189,11 @@ the prize passes to the runner-up.
 
 Because this repo is public, the contest is designed to be **independently verifiable:**
 
-- **Pinned models & settings.** The model panel is committed in `config.json`, and the
-  rubric lives in the judge prompts (`prompts/`), both fixed before the snapshot.
+- **Pinned judging inputs.** Contest creation freezes the model panel and exact judge prompt
+  templates in the contest record. The repo's `config.json` and `prompts/` files provide the
+  defaults for new contests but cannot change an existing one.
+- **Committed keywords.** Ingest refuses to run if the local keyword secret no longer matches
+  the salted hash stored when the contest was created.
 - **Full logs.** Every entry, every per-model score, and every pairwise decision is
   published after the contest.
 
