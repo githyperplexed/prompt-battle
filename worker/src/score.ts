@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { scoreContest } from "./services/scoring";
+import { scoreContest } from "$src/services/scoring";
 
 export const runScore = async () => {
 	const { values } = parseArgs({

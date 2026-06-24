@@ -1,10 +1,10 @@
 import { generateText, Output } from "ai";
 
-import { compareSchema, scoreSchema, type Comparison, type Score } from "../schemas";
-import { buildJudgeMessages } from "../utilities/judge";
-import { clampScore } from "../utilities/score";
-import { buildCompareMessages, buildScoreMessages } from "./prompts";
-import { model } from "./models";
+import { compareSchema, scoreSchema, type Comparison, type Score } from "$src/schemas";
+import { buildJudgeMessages } from "$src/utilities/judge";
+import { clampScore } from "$src/utilities/score";
+import { buildCompareMessages, buildScoreMessages } from "$src/services/prompts";
+import { model } from "$src/services/models";
 
 export const scoreEntry = async (
 	slug: string,

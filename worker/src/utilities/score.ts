@@ -1,4 +1,4 @@
-import type { Score } from "../schemas";
+import type { Score } from "$src/schemas";
 
 const clampDimension = (n: number) => Math.max(0, Math.min(25, Math.round(n)));
 

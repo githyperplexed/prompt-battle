@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { escapeRegExp } from "./text";
+import { escapeRegExp } from "$src/utilities/text";
 
 export const normalizeKeywords = (keywords: string[]): string =>
 	keywords

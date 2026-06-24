@@ -1,5 +1,5 @@
 // Load environment first — the db client reads DATABASE_URL when it is imported below.
-import "./env";
+import "$src/env";
 
 import { parseArgs } from "node:util";
 
@@ -14,19 +14,19 @@ const main = async () => {
 
 	switch (command) {
 		case "create": {
-			const { runCreate } = await import("./create");
+			const { runCreate } = await import("$src/create");
 
 			await runCreate();
 			break;
 		}
 		case "ingest": {
-			const { runIngest } = await import("./ingest");
+			const { runIngest } = await import("$src/ingest");
 
 			await runIngest();
 			break;
 		}
 		case "score": {
-			const { runScore } = await import("./score");
+			const { runScore } = await import("$src/score");
 
 			await runScore();
 			break;
@@ -35,8 +35,7 @@ const main = async () => {
 			console.log("[advance] stub — runs the bracket");
 			break;
 		case "smoke": {
-			// Lazy import so only this path requires OPENROUTER_API_KEY (ingest must not).
-			const { runSmoke } = await import("./smoke");
+			const { runSmoke } = await import("$src/smoke");
 
 			await runSmoke();
 			break;

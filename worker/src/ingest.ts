@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { snapshotContest, snapshotDueContests } from "./services/snapshot";
+import { snapshotContest, snapshotDueContests } from "$src/services/snapshot";
 
 export const runIngest = async () => {
 	const { values } = parseArgs({

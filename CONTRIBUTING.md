@@ -30,8 +30,10 @@ print width.** Don't fight it by hand.
 - **Tailwind classes:** always compose with the `cn()` helper (clsx + tailwind-merge).
   Never raw string concatenation or bare template literals for class lists.
 - **Imports:** group logically — built-ins, then third-party, then internal (`@prompt-battle/db`
-  and aliases), then relative. Ordering is intentionally **not** auto-enforced; keep it
-  sensible by hand.
+  and `$src/*`), then any relative. Ordering is intentionally **not** auto-enforced; keep it
+  sensible by hand. The `worker` package uses a `$src/*` alias (→ `worker/src/*`) for its
+  in-package imports; `db` stays on relative imports, since path aliases don't resolve across
+  package boundaries when one package imports another's source.
 - **Functions:** prefer `const` arrow functions (`const foo = () => …`) over `function`
   declarations. Use an implicit return for single-expression functions.
 - **Breathing room (line breaks):** Prettier won't add blank lines for you. Group related

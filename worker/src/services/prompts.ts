@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { makeNonce, replaceTokens } from "../utilities/text";
+import { makeNonce, replaceTokens } from "$src/utilities/text";
 
 type Sections = { system: string; user: string };
 

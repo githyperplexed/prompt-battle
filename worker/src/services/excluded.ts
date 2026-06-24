@@ -1,5 +1,5 @@
-import { isChannelId, parseChannelList } from "../utilities/channels";
-import { resolveChannelId } from "./youtube";
+import { isChannelId, parseChannelList } from "$src/utilities/channels";
+import { resolveChannelId } from "$src/services/youtube";
 
 export const resolveExcludedChannels = async (): Promise<Set<string>> => {
 	const tokens = parseChannelList(process.env.EXCLUDED_CHANNELS);

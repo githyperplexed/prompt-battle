@@ -6,7 +6,7 @@ import {
 	commentsResponseSchema,
 	toComment,
 	type YouTubeComment
-} from "../utilities/youtube";
+} from "$src/utilities/youtube";
 
 // Safety bound on a runaway fetch; the per-contest entry cap is applied later in validation.
 const MAX_COMMENTS = 50_000;

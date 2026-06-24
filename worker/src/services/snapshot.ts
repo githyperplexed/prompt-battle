@@ -1,11 +1,11 @@
 import { contest, db, entry, eq } from "@prompt-battle/db";
 
-import { MAX_ENTRIES } from "../constants";
-import { classifyComment, countCharacters } from "../utilities/validation";
-import { resolveExcludedChannels } from "./excluded";
-import { flagViolations } from "./moderation";
-import { loadKeywordSecret } from "./secrets";
-import { fetchAllComments } from "./youtube";
+import { MAX_ENTRIES } from "$src/constants";
+import { classifyComment, countCharacters } from "$src/utilities/validation";
+import { resolveExcludedChannels } from "$src/services/excluded";
+import { flagViolations } from "$src/services/moderation";
+import { loadKeywordSecret } from "$src/services/secrets";
+import { fetchAllComments } from "$src/services/youtube";
 
 type EntryInsert = typeof entry.$inferInsert;
 

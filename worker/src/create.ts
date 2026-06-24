@@ -1,9 +1,9 @@
 import { parseArgs } from "node:util";
 
-import { panel } from "./config";
-import { createContest } from "./services/contests";
-import { loadKeywordSecret } from "./services/secrets";
-import { keywordHash } from "./utilities/keywords";
+import { panel } from "$src/config";
+import { createContest } from "$src/services/contests";
+import { loadKeywordSecret } from "$src/services/secrets";
+import { keywordHash } from "$src/utilities/keywords";
 
 const HOUR_MS = 60 * 60 * 1000;
 

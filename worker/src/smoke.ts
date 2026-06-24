@@ -1,5 +1,5 @@
-import { panel } from "./config";
-import { compareEntries, scoreEntry } from "./services/judge";
+import { panel } from "$src/config";
+import { compareEntries, scoreEntry } from "$src/services/judge";
 
 const SAMPLE_A =
 	"If you're reading this, you've already spent more attention on my entry than I'm asking you to spend on the reward: ten seconds. I won't beg — I'll just note that an entry self-aware enough to point that out is exactly the small surprise these contests are meant to find.";

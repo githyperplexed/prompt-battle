@@ -2,9 +2,9 @@ import Bottleneck from "bottleneck";
 
 import { contest, db, eq, score } from "@prompt-battle/db";
 
-import { panel } from "../config";
-import { buildWorkList } from "../utilities/scoring";
-import { scoreEntry } from "./judge";
+import { panel } from "$src/config";
+import { buildWorkList } from "$src/utilities/scoring";
+import { scoreEntry } from "$src/services/judge";
 
 // ≤10 in flight, and a new request started at most every 200ms (5 req/s).
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });

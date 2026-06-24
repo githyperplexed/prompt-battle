@@ -1,5 +1,5 @@
-import { MAX_CHARS, MIN_CHARS } from "../constants";
-import { hasAllKeywords } from "./keywords";
+import { MAX_CHARS, MIN_CHARS } from "$src/constants";
+import { hasAllKeywords } from "$src/utilities/keywords";
 
 const URL_REGEX =
 	/(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|io|gg|tv|co|me|ly|app|dev|xyz|link|info|biz)\b/i;
