@@ -27,6 +27,14 @@ print width.** Don't fight it by hand.
 - **Imports:** group logically — built-ins, then third-party, then internal (`@prompt-battle/db`
   and aliases), then relative. Ordering is intentionally **not** auto-enforced; keep it
   sensible by hand.
+- **Functions:** prefer `const` arrow functions (`const foo = () => …`) over `function`
+  declarations. Use an implicit return for single-expression functions.
+- **Breathing room (line breaks):** Prettier won't add blank lines for you. Group related
+  `const` / `let` declarations, but put a blank line **before a control-flow statement**
+  (`if`, `for`, `while`, `switch`) that follows such a group, and a blank line **before a
+  `return`** (unless it is the only statement in the block).
+- **No unnecessary comments.** Don't restate what the code or a name already makes clear.
+  Comment only to explain non-obvious **why** — a gotcha, a rationale, or domain meaning.
 - **Naming:** kebab-case for files and directories; PascalCase for Svelte components;
   camelCase for variables and functions.
 - **Secrets never get committed.** Keywords, seeds, and keys live in `.env` / ignored
