@@ -22,6 +22,7 @@ export const dqReason = pgEnum("dq_reason", [
 	"duplicate_channel",
 	"affiliated",
 	"tos",
+	"edited_after_cutoff",
 	"deleted"
 ]);
 

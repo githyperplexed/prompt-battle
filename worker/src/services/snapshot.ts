@@ -1,6 +1,7 @@
 import { contest, db, entry, eq } from "@prompt-battle/db";
 
 import { MAX_ENTRIES } from "$src/constants";
+import { classifySnapshotTiming, isSnapshotDue } from "$src/utilities/snapshot";
 import { classifyComment, countCharacters } from "$src/utilities/validation";
 import { resolveExcludedChannels } from "$src/services/excluded";
 import { flagViolations } from "$src/services/moderation";
@@ -22,9 +23,27 @@ export const snapshotContest = async (contestId: string) => {
 		return { skipped: true as const, status: target.status };
 	}
 
+	const capturedAt = new Date();
+
+	if (!isSnapshotDue(target.snapshotAt, capturedAt)) {
+		throw new Error(
+			"Contest " + contestId + " is not due until " + target.snapshotAt.toISOString()
+		);
+	}
+
 	const secret = loadKeywordSecret(target.videoId);
 	const excluded = await resolveExcludedChannels();
-	const comments = await fetchAllComments(target.videoId);
+	const fetched = await fetchAllComments(target.videoId);
+	const comments = fetched.filter(
+		(comment) => classifySnapshotTiming(comment, target.snapshotAt) !== "posted_after_cutoff"
+	);
+	const editedAfterCutoff = new Set(
+		comments
+			.filter(
+				(comment) => classifySnapshotTiming(comment, target.snapshotAt) === "edited_after_cutoff"
+			)
+			.map((comment) => comment.commentId)
+	);
 
 	// Earliest first: drives "first eligible per channel" and "first 10k by timestamp".
 	comments.sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
@@ -49,6 +68,9 @@ export const snapshotContest = async (contestId: string) => {
 		if (flagged.has(comment.commentId)) {
 			status = "disqualified";
 			reason = "tos";
+		} else if (editedAfterCutoff.has(comment.commentId)) {
+			status = "disqualified";
+			reason = "edited_after_cutoff";
 		} else {
 			const verdict = classifyComment(comment, { keywords: secret.keywords, excluded });
 
@@ -89,9 +111,18 @@ export const snapshotContest = async (contestId: string) => {
 			.onConflictDoNothing();
 	}
 
-	await db.update(contest).set({ status: "snapshotted" }).where(eq(contest.id, target.id));
+	await db
+		.update(contest)
+		.set({ status: "snapshotted", capturedAt })
+		.where(eq(contest.id, target.id));
 
-	return { skipped: false as const, total: comments.length, stored: rows.length, eligible };
+	return {
+		skipped: false as const,
+		total: fetched.length,
+		afterCutoff: fetched.length - comments.length,
+		stored: rows.length,
+		eligible
+	};
 };
 
 export const snapshotDueContests = async () => {

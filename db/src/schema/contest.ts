@@ -17,6 +17,7 @@ export const contest = pgTable("contest", {
 	videoId: text().notNull(),
 	videoPublishedAt: timestamp({ withTimezone: true }).notNull(),
 	snapshotAt: timestamp({ withTimezone: true }).notNull(),
+	capturedAt: timestamp({ withTimezone: true }),
 	status: contestStatus().notNull().default("draft"),
 	config: jsonb(),
 	winnerEntryId: text(),

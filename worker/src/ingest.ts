@@ -42,7 +42,8 @@ export const runIngest = async () => {
 	}
 
 	console.log(`Snapshotted contest ${contestId}`);
-	console.log(`  fetched:  ${result.total}`);
-	console.log(`  stored:   ${result.stored}`);
+	console.log(`  fetched:      ${result.total}`);
+	console.log(`  after cutoff: ${result.afterCutoff}`);
+	console.log(`  stored:       ${result.stored}`);
 	console.log(`  eligible: ${result.eligible}`);
 };

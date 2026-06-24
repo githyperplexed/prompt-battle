@@ -31,8 +31,10 @@ There is no "correct" strategy. Argue, charm, surprise, or out-engineer everyone
    - Follow the [Eligibility](#3-eligibility) rules.
 3. That's it. Your comment as it exists **at the snapshot** is your entry.
 
-You may edit your comment freely *before* the snapshot. After the snapshot, edits
-are ignored — only the snapshot text counts.
+You may edit your comment freely through the snapshot cutoff. **Do not edit or delete it
+after the cutoff.** YouTube does not provide comment revision history: if its `updatedAt`
+timestamp is after the cutoff, the entry is disqualified because the cutoff text cannot be
+recovered. A comment deleted before capture cannot be recovered and does not enter.
 
 ---
 
@@ -44,6 +46,7 @@ are ignored — only the snapshot text counts.
 | **Length** | 50–1,000 characters (inclusive), measured on the snapshot text. |
 | **All three keywords** | Case-insensitive, whole-word, any order. Missing any one = invalid. |
 | **No links / URLs** | Any comment containing a URL is invalid. |
+| **No edits after cutoff** | A comment whose YouTube `updatedAt` timestamp is later than the snapshot cutoff is invalid. A timestamp exactly at the cutoff is accepted. |
 | **No TOS violations** | Must comply with YouTube's Terms of Service and Community Guidelines (no hate speech, harassment, doxxing, threats, sexual content involving minors, illegal content, etc.). Violations are removed before judging. |
 | **Affiliated accounts excluded** | The channel owner, moderators, and known affiliated accounts cannot win. |
 | **Max field size** | The first **10,000** eligible entries (by timestamp) are accepted. Beyond that, entries do not count. |
@@ -61,9 +64,10 @@ An entry is removed (before or during judging) if it:
 - Violates YouTube TOS / Community Guidelines.
 - Is a duplicate from a channel that already has a counted entry.
 - Is posted by an affiliated account.
-- Is deleted by its author before the snapshot.
+- Is edited after the snapshot cutoff.
+- Is deleted before it can be captured.
 
-Disqualification is based **only** on the snapshot text and the rules above.
+Disqualification is based only on the captured text, YouTube timestamps, and the rules above.
 
 ---
 
@@ -84,12 +88,14 @@ Disqualification is based **only** on the snapshot text and the rules above.
 
 ## 6. The Snapshot
 
-- A single **snapshot** of all eligible comments is taken **exactly 7 days (168
-  hours) after the video's publish time.** `[default — confirmed per contest]`
-- The snapshot is the **only** state used for judging. Comments added, edited, or
-  deleted after the snapshot are ignored.
-- The snapshot (entry text + channel id + timestamp) is archived and published with
-  the results.
+- The **snapshot cutoff** is exactly 7 days (168 hours) after the video's publish time.
+  `[default — confirmed per contest]`
+- Capture begins at or after that cutoff. A comment published after the cutoff is excluded.
+  Publication exactly at the cutoff is included.
+- YouTube exposes current text, not revision history. A comment whose `updatedAt` is after
+  the cutoff is stored as disqualified; an update exactly at the cutoff is included.
+- The captured entry text, channel id, YouTube timestamps, and actual capture time are
+  archived and published with the results.
 
 ---
 

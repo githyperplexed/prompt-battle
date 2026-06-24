@@ -20,8 +20,9 @@ prompts see [prompts/](prompts/).
 
 ## Where each step runs
 
-- **`ingest` is time-sensitive** — it snapshots comments ~168h after the video is
-  published, capturing text before later edits. It can run unattended as a **Railway cron
+- **`ingest` is time-sensitive** — it snapshots comments at or just after the 168h cutoff.
+  The worker rejects early runs, excludes later posts, and disqualifies comments YouTube marks
+  as edited after the cutoff. It can run unattended as a **Railway cron
   service** (`worker ingest --due`, polled every ~10–15 min, idempotent via contest
   status). ⬜
 - **`score` and `advance` run locally** — resume-safe batches you trigger by hand. The
@@ -53,10 +54,13 @@ bun run worker ingest --due              # cron mode: snapshot any contest past 
 ```
 
 Fetches all top-level comments, validates each (length 50–1,000, all 3 keywords, no URLs,
-one-per-channel by earliest timestamp, OpenAI content moderation → `tos`), and freezes them
-as `entry` rows — eligible and disqualified-with-reason. Run at or just after the 168h
-cutoff. Affiliated accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to
-channel ids via the API).
+one-per-channel by earliest timestamp, no post-cutoff edit, OpenAI content moderation →
+`tos`), and freezes them as `entry` rows — eligible and disqualified-with-reason. Comments
+published after the cutoff are not entries; comments edited after it are stored with
+`edited_after_cutoff`. Publication/update exactly at the cutoff is accepted. The contest's
+actual capture start is stored in `captured_at`. Run at or just after the cutoff. Affiliated
+accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to channel ids via the
+API).
 
 ### 3. Score the field ✅
 
