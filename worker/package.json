@@ -8,8 +8,11 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@openrouter/ai-sdk-provider": "^2.9.1",
 		"@prompt-battle/db": "workspace:*",
-		"dotenv": "^17.4.2"
+		"ai": "^6.0.209",
+		"dotenv": "^17.4.2",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@types/node": "^26.0.0"

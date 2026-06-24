@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 
 import { pool } from "@prompt-battle/db";
 
-const COMMANDS = ["ingest", "score", "advance"] as const;
+const COMMANDS = ["ingest", "score", "advance", "smoke"] as const;
 type Command = (typeof COMMANDS)[number];
 
 async function main() {
@@ -24,6 +24,12 @@ async function main() {
 		case "advance":
 			console.log("[advance] stub — runs the bracket");
 			break;
+		case "smoke": {
+			// Lazy import so only this path requires OPENROUTER_API_KEY (ingest must not).
+			const { runSmoke } = await import("./smoke");
+			await runSmoke();
+			break;
+		}
 		default:
 			console.log(`Usage: worker <${COMMANDS.join(" | ")}>`);
 			if (command) process.exitCode = 1;
