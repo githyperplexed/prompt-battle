@@ -1,4 +1,13 @@
-import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+	index,
+	integer,
+	pgEnum,
+	pgTable,
+	real,
+	text,
+	timestamp,
+	uniqueIndex
+} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { contest } from "./contest";
@@ -34,6 +43,10 @@ export const entry = pgTable(
 		updatedAt: timestamp({ withTimezone: true }).notNull(),
 		status: entryStatus().notNull().default("eligible"),
 		dqReason: dqReason(),
+		absoluteScore: real(),
+		rank: integer(),
+		seed: integer(),
+		finalRound: integer(),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [

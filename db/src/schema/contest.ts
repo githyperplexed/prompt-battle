@@ -18,5 +18,6 @@ export const contest = pgTable("contest", {
 	snapshotAt: timestamp({ withTimezone: true }).notNull(),
 	status: contestStatus().notNull().default("draft"),
 	config: jsonb(),
+	winnerEntryId: text(),
 	createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 });
