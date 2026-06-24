@@ -31,9 +31,12 @@ const main = async () => {
 			await runScore();
 			break;
 		}
-		case "advance":
-			console.log("[advance] stub — runs the bracket");
+		case "advance": {
+			const { runAdvance } = await import("$src/advance");
+
+			await runAdvance();
 			break;
+		}
 		case "smoke": {
 			const { runSmoke } = await import("$src/smoke");
 

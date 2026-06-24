@@ -69,14 +69,16 @@ rubric scores. ~10k × 3 calls — the bulk of the cost. Resume-safe via the uni
 `(entry, model)` constraint; runs ≤10 concurrent at ≤5 req/s, caches the judge prompt, and
 logs-and-continues past individual failures.
 
-### 4. Run the bracket 🚧
+### 4. Run the bracket ✅
 
 ```
 bun run worker advance --contest <id>
 ```
 
 Ranks entries by absolute score, takes the **top 64**, seeds them, and runs the
-single-elimination bracket (3 models × both orderings per matchup) down to one winner.
+single-elimination bracket (3 models × both orderings per matchup, majority vote, deadlock to
+the higher seed) down to one winner. Materializes per-entry `absolute_score` / `rank` / `seed`
+/ `final_round` and the contest's `winner_entry_id`, then sets status `complete`. Resume-safe;
 ~378 calls.
 
 ### 5. Publish results ⬜

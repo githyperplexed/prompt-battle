@@ -1,0 +1,50 @@
+export const nextPowerOfTwo = (n: number): number => {
+	let size = 1;
+
+	while (size < n) size *= 2;
+
+	return size;
+};
+
+// Top-to-bottom seed positions for a full bracket, arranged so #1 and #2 can only meet in
+// the final. e.g. size 8 -> [1, 8, 4, 5, 2, 7, 3, 6]; round-1 matchups are consecutive pairs.
+export const seedOrder = (size: number): number[] => {
+	let seeds = [1];
+
+	while (seeds.length < size) {
+		const round = seeds.length * 2;
+		const next: number[] = [];
+
+		for (const seed of seeds) next.push(seed, round + 1 - seed);
+
+		seeds = next;
+	}
+
+	return seeds;
+};
+
+type Vote = { modelId: string; chosenEntryId: string };
+
+// A model's vote counts only if it chose the same entry in both orderings; majority wins.
+// A deadlock goes to entryA, which the caller passes as the higher seed.
+export const tallyMatchup = (entryA: string, entryB: string, votes: Vote[]): string => {
+	const choicesByModel = new Map<string, Set<string>>();
+
+	for (const vote of votes) {
+		const choices = choicesByModel.get(vote.modelId) ?? new Set<string>();
+		choices.add(vote.chosenEntryId);
+		choicesByModel.set(vote.modelId, choices);
+	}
+
+	let aVotes = 0;
+	let bVotes = 0;
+
+	for (const choices of choicesByModel.values()) {
+		if (choices.size !== 1) continue;
+
+		if (choices.has(entryA)) aVotes += 1;
+		else if (choices.has(entryB)) bVotes += 1;
+	}
+
+	return bVotes > aVotes ? entryB : entryA;
+};
