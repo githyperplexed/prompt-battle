@@ -1,4 +1,13 @@
-import { index, jsonb, pgTable, smallint, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	index,
+	jsonb,
+	pgTable,
+	smallint,
+	text,
+	timestamp,
+	uniqueIndex
+} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { contest } from "./contest";
@@ -27,6 +36,11 @@ export const score = pgTable(
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [
+		foreignKey({
+			name: "score_contest_entry_fk",
+			columns: [t.contestId, t.entryId],
+			foreignColumns: [entry.contestId, entry.id]
+		}).onDelete("cascade"),
 		uniqueIndex("score_entry_model_unique").on(t.entryId, t.modelId),
 		index("score_contest_idx").on(t.contestId)
 	]

@@ -5,6 +5,7 @@ import { comparison, contest, db, entry, eq, matchup, score, sql } from "@prompt
 import { BRACKET_SIZE } from "$src/constants";
 import { parseContestConfig, type ContestConfig } from "$src/utilities/contest-config";
 import {
+	assertMatchupEntry,
 	bracketFingerprint,
 	nextPowerOfTwo,
 	seedOrder,
@@ -189,7 +190,10 @@ const resolveMatchup = async (
 
 	const row = await getOrCreateMatchup(contestId, round, slot, entryA, entryB);
 
-	if (row.winnerId) return row.winnerId;
+	if (row.winnerId) {
+		assertMatchupEntry(entryA, entryB, row.winnerId, "Stored winnerId");
+		return row.winnerId;
+	}
 
 	const textA = textOfId.get(entryA);
 	const textB = textOfId.get(entryB);
@@ -200,6 +204,10 @@ const resolveMatchup = async (
 		where: (c, { eq }) => eq(c.matchupId, row.id),
 		columns: { modelId: true, orderSwapped: true, chosenEntryId: true }
 	});
+
+	for (const c of recorded) {
+		assertMatchupEntry(entryA, entryB, c.chosenEntryId, "Recorded chosenEntryId");
+	}
 
 	const doneKeys = new Set(recorded.map((c) => `${c.modelId}:${c.orderSwapped}`));
 
@@ -225,6 +233,7 @@ const resolveMatchup = async (
 				const firstEntry = p.orderSwapped ? entryB : entryA;
 				const secondEntry = p.orderSwapped ? entryA : entryB;
 				const chosenEntryId = verdict.winner === "A" ? firstEntry : secondEntry;
+				assertMatchupEntry(entryA, entryB, chosenEntryId, "Fresh chosenEntryId");
 
 				await db
 					.insert(comparison)
@@ -248,6 +257,7 @@ const resolveMatchup = async (
 	];
 
 	const winner = tallyMatchup(entryA, entryB, votes);
+	assertMatchupEntry(entryA, entryB, winner, "Resolved winnerId");
 
 	await db.update(matchup).set({ winnerId: winner }).where(eq(matchup.id, row.id));
 

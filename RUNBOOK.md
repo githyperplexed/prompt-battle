@@ -99,6 +99,11 @@ Materializes per-entry `absolute_score` / `rank` / `seed` / `final_round` and th
 `winner_entry_id`, then sets status `complete`. Resume-safe only when the recomputed seeded
 field matches the stored fingerprint; ~378 calls.
 
+Database constraints keep score and matchup rows inside their contest boundary. The worker also
+asserts each stored or fresh bracket choice is one of that matchup's two entries before it can
+resume or persist a winner. Denormalized comparison-pair database triggers are intentionally
+deferred while comparison writes remain confined to this worker path.
+
 #### Recovering from bracket fingerprint mismatch
 
 If `advance` fails with a bracket fingerprint mismatch, stop. It means existing bracket state

@@ -1,4 +1,12 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	index,
+	integer,
+	pgTable,
+	text,
+	timestamp,
+	uniqueIndex
+} from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { contest } from "./contest";
@@ -27,6 +35,21 @@ export const matchup = pgTable(
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [
+		foreignKey({
+			name: "matchup_contest_entry_a_fk",
+			columns: [t.contestId, t.entryAId],
+			foreignColumns: [entry.contestId, entry.id]
+		}),
+		foreignKey({
+			name: "matchup_contest_entry_b_fk",
+			columns: [t.contestId, t.entryBId],
+			foreignColumns: [entry.contestId, entry.id]
+		}),
+		foreignKey({
+			name: "matchup_contest_winner_fk",
+			columns: [t.contestId, t.winnerId],
+			foreignColumns: [entry.contestId, entry.id]
+		}),
 		uniqueIndex("matchup_contest_round_slot_unique").on(t.contestId, t.round, t.slot),
 		index("matchup_contest_idx").on(t.contestId)
 	]

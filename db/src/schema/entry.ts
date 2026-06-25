@@ -6,6 +6,7 @@ import {
 	real,
 	text,
 	timestamp,
+	unique,
 	uniqueIndex
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
@@ -51,6 +52,7 @@ export const entry = pgTable(
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [
+		unique("entry_contest_id_unique").on(t.contestId, t.id),
 		uniqueIndex("entry_contest_comment_unique").on(t.contestId, t.youtubeCommentId),
 		index("entry_contest_channel_idx").on(t.contestId, t.channelId),
 		index("entry_contest_status_idx").on(t.contestId, t.status)

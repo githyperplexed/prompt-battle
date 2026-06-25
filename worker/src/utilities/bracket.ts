@@ -45,6 +45,17 @@ export const bracketFingerprint = (seeded: BracketFingerprintSeed[]): string => 
 
 type Vote = { modelId: string; chosenEntryId: string };
 
+export const assertMatchupEntry = (
+	entryA: string,
+	entryB: string,
+	entryId: string,
+	label: string
+): void => {
+	if (entryId !== entryA && entryId !== entryB) {
+		throw new Error(`${label} ${entryId} is not part of matchup (${entryA}, ${entryB})`);
+	}
+};
+
 // A model's vote counts only if it chose the same entry in both orderings; majority wins.
 // A deadlock goes to entryA, which the caller passes as the higher seed.
 export const tallyMatchup = (entryA: string, entryB: string, votes: Vote[]): string => {

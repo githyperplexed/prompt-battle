@@ -43,6 +43,13 @@
       "when": 1782392730972,
       "tag": "0005_judge_audit_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782393753952,
+      "tag": "0006_contest_boundary_constraints",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+	assertMatchupEntry,
 	bracketFingerprint,
 	nextPowerOfTwo,
 	seedOrder,
@@ -48,6 +49,14 @@ describe("bracket utilities", () => {
 
 	test("orders seeds so top seeds meet as late as possible", () => {
 		expect(seedOrder(8)).toEqual([1, 8, 4, 5, 2, 7, 3, 6]);
+	});
+
+	test("asserts matchup decisions belong to the pair", () => {
+		expect(() => assertMatchupEntry("a", "b", "a", "winnerId")).not.toThrow();
+		expect(() => assertMatchupEntry("a", "b", "b", "chosenEntryId")).not.toThrow();
+		expect(() => assertMatchupEntry("a", "b", "c", "winnerId")).toThrow(
+			"winnerId c is not part of matchup (a, b)"
+		);
 	});
 
 	test("tallies only consistent model votes and deadlocks to higher seed", () => {
