@@ -1,10 +1,8 @@
-import { contest, db, entry, eq } from "@prompt-battle/db";
+import { contest, db, entry, eq, sql } from "@prompt-battle/db";
 
-import { MAX_ENTRIES } from "$src/constants";
 import { parseContestConfig } from "$src/utilities/contest-config";
 import { matchesKeywordHash } from "$src/utilities/keywords";
-import { classifySnapshotTiming, isSnapshotDue } from "$src/utilities/snapshot";
-import { classifyComment, countCharacters } from "$src/utilities/validation";
+import { buildSnapshotRows, isSnapshotDue, type SnapshotEntryRow } from "$src/utilities/snapshot";
 import { resolveExcludedChannels } from "$src/services/excluded";
 import { flagViolations } from "$src/services/moderation";
 import { loadKeywordSecret } from "$src/services/secrets";
@@ -13,6 +11,44 @@ import { fetchAllComments } from "$src/services/youtube";
 type EntryInsert = typeof entry.$inferInsert;
 
 const CHUNK = 1000;
+
+const toEntryInsert = (row: SnapshotEntryRow): EntryInsert => row;
+
+const commitSnapshotRows = async ({
+	contestId,
+	rows,
+	capturedAt
+}: {
+	contestId: string;
+	rows: EntryInsert[];
+	capturedAt: Date;
+}) =>
+	db.transaction(async (tx) => {
+		await tx.execute(sql`select 1 from ${contest} where ${contest.id} = ${contestId} for update`);
+
+		const locked = await tx.query.contest.findFirst({
+			where: (c, { eq }) => eq(c.id, contestId)
+		});
+
+		if (!locked) throw new Error(`No contest with id ${contestId}`);
+
+		if (locked.status !== "open") {
+			return { skipped: true as const, status: locked.status };
+		}
+
+		await tx.delete(entry).where(eq(entry.contestId, contestId));
+
+		for (let i = 0; i < rows.length; i += CHUNK) {
+			await tx.insert(entry).values(rows.slice(i, i + CHUNK));
+		}
+
+		await tx
+			.update(contest)
+			.set({ status: "snapshotted", capturedAt })
+			.where(eq(contest.id, contestId));
+
+		return { skipped: false as const };
+	});
 
 export const snapshotContest = async (contestId: string) => {
 	const target = await db.query.contest.findFirst({
@@ -42,94 +78,35 @@ export const snapshotContest = async (contestId: string) => {
 
 	const excluded = await resolveExcludedChannels();
 	const fetched = await fetchAllComments(target.videoId);
-	const comments = fetched.filter(
-		(comment) => classifySnapshotTiming(comment, target.snapshotAt) !== "posted_after_cutoff"
+	const moderationCandidates = fetched.filter(
+		(comment) => comment.publishedAt.getTime() <= target.snapshotAt.getTime()
 	);
-	const editedAfterCutoff = new Set(
-		comments
-			.filter(
-				(comment) => classifySnapshotTiming(comment, target.snapshotAt) === "edited_after_cutoff"
-			)
-			.map((comment) => comment.commentId)
-	);
-
-	// Earliest first: drives "first eligible per channel" and "first 10k by timestamp".
-	comments.sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
-
-	const flags = await flagViolations(comments.map((c) => c.text));
+	const flags = await flagViolations(moderationCandidates.map((c) => c.text));
 	const flagged = new Set<string>();
 
-	comments.forEach((c, i) => {
-		if (flags[i]) flagged.add(c.commentId);
+	moderationCandidates.forEach((comment, i) => {
+		if (flags[i]) flagged.add(comment.commentId);
 	});
 
-	const countedChannels = new Set<string>();
-	const rows: EntryInsert[] = [];
+	const prepared = buildSnapshotRows({
+		contestId: target.id,
+		comments: fetched,
+		snapshotAt: target.snapshotAt,
+		keywords: secret.keywords,
+		excluded,
+		flaggedCommentIds: flagged
+	});
+	const rows = prepared.rows.map(toEntryInsert);
+	const commit = await commitSnapshotRows({ contestId: target.id, rows, capturedAt });
 
-	let eligible = 0;
-
-	for (const comment of comments) {
-		let status: "eligible" | "disqualified";
-		let reason: EntryInsert["dqReason"] = null;
-
-		// Content-policy violations take precedence so flagged text never advances or counts.
-		if (flagged.has(comment.commentId)) {
-			status = "disqualified";
-			reason = "tos";
-		} else if (editedAfterCutoff.has(comment.commentId)) {
-			status = "disqualified";
-			reason = "edited_after_cutoff";
-		} else {
-			const verdict = classifyComment(comment, { keywords: secret.keywords, excluded });
-
-			if (!verdict.eligible) {
-				status = "disqualified";
-				reason = verdict.reason;
-			} else if (countedChannels.has(comment.channelId)) {
-				status = "disqualified";
-				reason = "duplicate_channel";
-			} else if (eligible >= MAX_ENTRIES) {
-				continue;
-			} else {
-				status = "eligible";
-				countedChannels.add(comment.channelId);
-				eligible += 1;
-			}
-		}
-
-		rows.push({
-			contestId: target.id,
-			youtubeCommentId: comment.commentId,
-			channelId: comment.channelId,
-			authorDisplayName: comment.authorDisplayName,
-			text: comment.text,
-			charCount: countCharacters(comment.text),
-			publishedAt: comment.publishedAt,
-			updatedAt: comment.updatedAt,
-			status,
-			dqReason: reason
-		});
-	}
-
-	// onConflictDoNothing keeps the snapshot immutable on re-runs (idempotent for cron).
-	for (let i = 0; i < rows.length; i += CHUNK) {
-		await db
-			.insert(entry)
-			.values(rows.slice(i, i + CHUNK))
-			.onConflictDoNothing();
-	}
-
-	await db
-		.update(contest)
-		.set({ status: "snapshotted", capturedAt })
-		.where(eq(contest.id, target.id));
+	if (commit.skipped) return commit;
 
 	return {
 		skipped: false as const,
 		total: fetched.length,
-		afterCutoff: fetched.length - comments.length,
+		afterCutoff: prepared.afterCutoff,
 		stored: rows.length,
-		eligible
+		eligible: prepared.eligible
 	};
 };
 

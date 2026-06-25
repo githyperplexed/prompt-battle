@@ -1,4 +1,4 @@
 export * from "./client";
 export * from "./schema";
 
-export { eq } from "drizzle-orm";
+export { eq, sql } from "drizzle-orm";
