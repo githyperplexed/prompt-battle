@@ -21,11 +21,11 @@ prompts see [prompts/](prompts/).
 ## Where each step runs
 
 - **`ingest` is time-sensitive** — it snapshots comments at or just after the 168h cutoff.
-  The worker rejects early runs, excludes later posts, and disqualifies comments YouTube marks
-  as edited after the cutoff. It prepares the full snapshot first, including moderated
-  comments, then commits entries plus the status flip in one locked database transaction. It
-  can run unattended as a **Railway cron service** (`worker ingest --due`, polled every
-  ~10–15 min, idempotent via contest status). ⬜
+  The worker rejects early runs, refuses incomplete YouTube comment-history fetches, excludes
+  later posts, and disqualifies comments YouTube marks as edited after the cutoff. It prepares
+  the full snapshot first, including moderated comments, then commits entries plus the status
+  flip in one locked database transaction. It can run unattended as a **Railway cron service**
+  (`worker ingest --due`, polled every ~10–15 min, idempotent via contest status). ⬜
 - **`score` and `advance` run locally** — resume-safe batches you trigger by hand. The
   workload is LLM-bound, so running from a laptop against the Railway DB is fine.
 
@@ -67,9 +67,11 @@ API).
 
 Before any external API call, ingest validates the stored contest configuration and verifies
 that `secrets/<videoId>.json` still produces the keyword hash committed at creation. YouTube
-fetching and OpenAI moderation complete before the transaction starts; moderation batches are
-paced and retry transient `429`/`5xx` responses, including `Retry-After`, so a moderation
-failure leaves the contest `open` with no partial snapshot commit.
+fetching must exhaust comment pagination within the 100,000-comment safety cap; if another
+page remains at that cap, ingest aborts rather than freezing a partial field. OpenAI
+moderation completes before the transaction starts; moderation batches are paced and retry
+transient `429`/`5xx` responses, including `Retry-After`, so a moderation failure leaves the
+contest `open` with no partial snapshot commit.
 
 ### 3. Score the field ✅
 

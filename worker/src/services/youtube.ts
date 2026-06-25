@@ -9,7 +9,7 @@ import {
 } from "$src/utilities/youtube";
 
 // Safety bound on a runaway fetch; the per-contest entry cap is applied later in validation.
-const MAX_COMMENTS = 50_000;
+const MAX_COMMENTS = 100_000;
 
 const apiKey = process.env.YOUTUBE_API_KEY;
 
@@ -18,6 +18,13 @@ if (!apiKey) throw new Error("YOUTUBE_API_KEY is not set");
 type CommentPage = {
 	comments: YouTubeComment[];
 	nextPageToken?: string;
+	skipped: number;
+};
+
+export type CommentHistory = {
+	comments: YouTubeComment[];
+	complete: boolean;
+	maxComments: number;
 	skipped: number;
 };
 
@@ -60,24 +67,28 @@ const fetchCommentPage = async (
 export const fetchAllComments = async (
 	videoId: string,
 	options: { maxComments?: number } = {}
-): Promise<YouTubeComment[]> => {
+): Promise<CommentHistory> => {
 	const maxComments = options.maxComments ?? MAX_COMMENTS;
 	const comments: YouTubeComment[] = [];
 
 	let pageToken: string | undefined;
 	let skipped = 0;
+	let complete = true;
 
 	do {
 		const page = await fetchCommentPage(videoId, pageToken);
+		const remaining = maxComments - comments.length;
 
-		comments.push(...page.comments);
+		comments.push(...page.comments.slice(0, remaining));
 		skipped += page.skipped;
 		pageToken = page.nextPageToken;
-	} while (pageToken && comments.length < maxComments);
+
+		if (pageToken && comments.length >= maxComments) complete = false;
+	} while (complete && pageToken);
 
 	if (skipped > 0) console.warn(`Skipped ${skipped} unparseable comment(s) for video ${videoId}`);
 
-	return comments;
+	return { comments, complete, maxComments, skipped };
 };
 
 export const resolveChannelId = async (handle: string): Promise<string | null> => {

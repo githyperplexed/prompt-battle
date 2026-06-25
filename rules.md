@@ -92,6 +92,8 @@ Disqualification is based only on the captured text, YouTube timestamps, and the
   `[default — confirmed per contest]`
 - Capture begins at or after that cutoff. A comment published after the cutoff is excluded.
   Publication exactly at the cutoff is included.
+- If YouTube pagination cannot be fully exhausted, the snapshot is considered incomplete and
+  the contest will not be finalized from that partial data.
 - YouTube exposes current text, not revision history. A comment whose `updatedAt` is after
   the cutoff is stored as disqualified; an update exactly at the cutoff is included.
 - The captured entry text, channel id, YouTube timestamps, and actual capture time are

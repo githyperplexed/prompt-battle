@@ -78,7 +78,15 @@ export const snapshotContest = async (contestId: string) => {
 
 	const excluded = await resolveExcludedChannels();
 	const fetched = await fetchAllComments(target.videoId);
-	const moderationCandidates = fetched.filter(
+
+	if (!fetched.complete) {
+		throw new Error(
+			`YouTube comment history exceeded the ${fetched.maxComments} comment fetch cap for contest ${contestId}; snapshot is incomplete and cannot be frozen.`
+		);
+	}
+
+	const comments = fetched.comments;
+	const moderationCandidates = comments.filter(
 		(comment) => comment.publishedAt.getTime() <= target.snapshotAt.getTime()
 	);
 	const flags = await flagViolations(moderationCandidates.map((c) => c.text));
@@ -90,7 +98,7 @@ export const snapshotContest = async (contestId: string) => {
 
 	const prepared = buildSnapshotRows({
 		contestId: target.id,
-		comments: fetched,
+		comments,
 		snapshotAt: target.snapshotAt,
 		keywords: secret.keywords,
 		excluded,
@@ -103,7 +111,7 @@ export const snapshotContest = async (contestId: string) => {
 
 	return {
 		skipped: false as const,
-		total: fetched.length,
+		total: comments.length,
 		afterCutoff: prepared.afterCutoff,
 		stored: rows.length,
 		eligible: prepared.eligible
