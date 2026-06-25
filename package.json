@@ -16,10 +16,15 @@
 		"db:migrate": "bun run --filter @prompt-battle/db db:migrate",
 		"db:push": "bun run --filter @prompt-battle/db db:push",
 		"db:studio": "bun run --filter @prompt-battle/db db:studio",
-		"worker": "bun worker/src/cli.ts"
+		"worker": "bun worker/src/cli.ts",
+		"web:dev": "bun run --filter @prompt-battle/web dev",
+		"web:build": "bun run --filter @prompt-battle/web build",
+		"web:check": "bun run --filter @prompt-battle/web check"
 	},
 	"devDependencies": {
 		"prettier": "^3.8.4",
+		"prettier-plugin-svelte": "^4.1.1",
+		"prettier-plugin-tailwindcss": "^0.8.0",
 		"typescript": "^6.0.3"
 	}
 }
