@@ -80,7 +80,7 @@ bun run worker score --contest <id>
 ```
 
 Scores every eligible entry once per model (3 models), in isolation, storing per-model
-rubric scores. ~10k × 3 calls — the bulk of the cost. Resume-safe via the unique
+rubric scores plus available model usage/finish audit metadata. ~10k × 3 calls — the bulk of the cost. Resume-safe via the unique
 `(entry, model)` constraint; runs ≤10 concurrent at ≤5 req/s and caches the judge prompt.
 Individual failures leave the contest in `scoring` and make the command exit nonzero; re-run
 until every eligible entry has exactly one score from each panel model and the contest reaches
@@ -123,8 +123,14 @@ rerun normal `advance --contest <id>` to compute a fresh fingerprint and bracket
 
 ### 5. Publish results ⬜
 
-Export entries, per-model scores, and matchup decisions for the public record; surface them
-in the web UI.
+Export the audit bundle for the public record and surface it in the web UI:
+
+- contest config (`panel`, prompt hashes/text, keyword hash, judge request settings);
+- revealed keywords and salt;
+- captured entries and disqualification reasons;
+- per-model scores with usage/finish metadata;
+- matchup decisions with usage/finish metadata;
+- bracket fingerprint and winner.
 
 ## Notes
 

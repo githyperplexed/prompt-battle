@@ -27,6 +27,18 @@ export const panelModelSchema = z.object({
 		.regex(/^[^/]+\/.+$/, "Model slug must include a provider prefix")
 });
 
+export const judgeRequestSettingsSchema = z.object({
+	maxRetries: z.number().int().min(0).max(5),
+	sampling: z.literal("provider_default")
+});
+
+export type JudgeRequestSettings = z.infer<typeof judgeRequestSettingsSchema>;
+
+export const defaultJudgeRequestSettings: JudgeRequestSettings = {
+	maxRetries: 2,
+	sampling: "provider_default"
+};
+
 export const panelSchema = z
 	.array(panelModelSchema)
 	.length(3)
@@ -54,7 +66,8 @@ export const contestConfigSchema = z.object({
 	version: z.literal(1),
 	keywordHash: z.string().regex(/^[a-f0-9]{64}$/),
 	panel: panelSchema,
-	prompts: z.object({ score: promptSchema, compare: promptSchema })
+	prompts: z.object({ score: promptSchema, compare: promptSchema }),
+	judge: z.object({ requestSettings: judgeRequestSettingsSchema })
 });
 
 export type PromptTemplate = z.infer<typeof promptSchema>;
@@ -67,6 +80,7 @@ export const createContestConfig = (input: {
 	keywordHash: string;
 	panel: PanelModel[];
 	prompts: { score: UnpinnedPrompt; compare: UnpinnedPrompt };
+	judge?: { requestSettings: JudgeRequestSettings };
 }): ContestConfig =>
 	contestConfigSchema.parse({
 		version: 1,
@@ -75,7 +89,8 @@ export const createContestConfig = (input: {
 		prompts: {
 			score: { ...input.prompts.score, hash: promptContentHash(input.prompts.score) },
 			compare: { ...input.prompts.compare, hash: promptContentHash(input.prompts.compare) }
-		}
+		},
+		judge: input.judge ?? { requestSettings: defaultJudgeRequestSettings }
 	});
 
 export const parseContestConfig = (value: unknown): ContestConfig =>

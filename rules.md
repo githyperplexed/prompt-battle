@@ -5,7 +5,7 @@ A community game where viewers compete by writing a single comment that tries to
 independent AI models across multiple elimination rounds until one comment remains.
 
 This entire project — the rules, the judging code, and the per-contest logs — is
-open source so anyone can verify that the contest is run exactly as described.
+open source so anyone can audit that the contest used the published rules, frozen inputs, and recorded decisions.
 
 > **Status:** Items marked `TBD` are decided per-contest and announced in the video.
 
@@ -187,17 +187,21 @@ the prize passes to the runner-up.
 
 ---
 
-## 9. Fairness & Reproducibility
+## 9. Fairness & Auditability
 
-Because this repo is public, the contest is designed to be **independently verifiable:**
+Because this repo is public, the contest is designed to be **independently auditable**. Hosted
+AI models can change behind a model slug, so exact replay is not promised; instead, the public
+record shows the frozen inputs and every recorded decision used to produce the result.
 
-- **Pinned judging inputs.** Contest creation freezes the model panel and exact judge prompt
-  templates in the contest record. The repo's `config.json` and `prompts/` files provide the
-  defaults for new contests but cannot change an existing one.
+- **Pinned judging inputs.** Contest creation freezes the model panel, exact judge prompt
+  templates, and safe request settings in the contest record. Sampling behavior is recorded as
+  provider/model default unless a setting is explicitly supported across the panel.
 - **Committed keywords.** Ingest refuses to run if the local keyword secret no longer matches
   the salted hash stored when the contest was created.
-- **Full logs.** Every entry, every per-model score, and every pairwise decision is
-  published after the contest.
+- **Decision logs.** Every entry, every per-model score, every pairwise decision, and available
+  model usage/finish metadata are published after the contest.
+- **Bracket fingerprint.** The top-64 seeded field is fingerprinted so bracket resumes can be
+  checked against the exact scored field that produced the winner.
 
 ---
 

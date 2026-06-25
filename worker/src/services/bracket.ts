@@ -213,7 +213,13 @@ const resolveMatchup = async (
 		pending.map((p) =>
 			limiter.schedule(async () => {
 				const [first, second] = p.orderSwapped ? [textB, textA] : [textA, textB];
-				const verdict = await compareEntries(p.model.slug, first, second, config.prompts.compare);
+				const { comparison: verdict, audit } = await compareEntries(
+					p.model.slug,
+					first,
+					second,
+					config.prompts.compare,
+					config.judge.requestSettings
+				);
 
 				// "A" is whichever entry was presented first; map back to the canonical entry.
 				const firstEntry = p.orderSwapped ? entryB : entryA;
@@ -226,7 +232,8 @@ const resolveMatchup = async (
 						matchupId: row.id,
 						modelId: p.model.id,
 						orderSwapped: p.orderSwapped,
-						chosenEntryId
+						chosenEntryId,
+						audit
 					})
 					.onConflictDoNothing();
 

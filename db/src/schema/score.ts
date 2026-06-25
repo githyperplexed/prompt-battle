@@ -23,7 +23,7 @@ export const score = pgTable(
 		execution: smallint().notNull(),
 		total: smallint().notNull(),
 		nonce: text().notNull(),
-		usage: jsonb(),
+		audit: jsonb(),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [

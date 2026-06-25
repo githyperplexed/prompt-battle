@@ -36,6 +36,7 @@ describe("contest config", () => {
 
 		expect(config.version).toBe(1);
 		expect(config.prompts.score.hash).toBe(promptContentHash(prompts.score));
+		expect(config.judge.requestSettings).toEqual({ maxRetries: 2, sampling: "provider_default" });
 		expect(parseContestConfig(config)).toEqual(config);
 	});
 

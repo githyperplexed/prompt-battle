@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 import { entry } from "./entry";
@@ -20,6 +20,7 @@ export const comparison = pgTable(
 		chosenEntryId: text()
 			.notNull()
 			.references(() => entry.id),
+		audit: jsonb(),
 		createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [

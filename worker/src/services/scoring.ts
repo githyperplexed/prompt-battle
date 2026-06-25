@@ -5,6 +5,7 @@ import { contest, db, eq, score } from "@prompt-battle/db";
 import {
 	parseContestConfig,
 	type ContestConfig,
+	type JudgeRequestSettings,
 	type PromptTemplate
 } from "$src/utilities/contest-config";
 import { auditScoreCoverage, buildWorkList } from "$src/utilities/scoring";
@@ -49,9 +50,14 @@ const scoreAndStore = async (
 	contestId: string,
 	entry: Entry,
 	model: Model,
-	prompt: PromptTemplate
+	prompt: PromptTemplate,
+	requestSettings: JudgeRequestSettings
 ) => {
-	const { score: result, nonce } = await scoreEntry(model.slug, entry.text, prompt);
+	const {
+		score: result,
+		nonce,
+		audit
+	} = await scoreEntry(model.slug, entry.text, prompt, requestSettings);
 
 	await db
 		.insert(score)
@@ -64,7 +70,8 @@ const scoreAndStore = async (
 			cleverness: result.cleverness,
 			execution: result.execution,
 			total: result.persuasiveness + result.originality + result.cleverness + result.execution,
-			nonce
+			nonce,
+			audit
 		})
 		.onConflictDoNothing();
 };
@@ -72,7 +79,8 @@ const scoreAndStore = async (
 const runScoring = async (
 	contestId: string,
 	work: { entry: Entry; model: Model }[],
-	prompt: PromptTemplate
+	prompt: PromptTemplate,
+	requestSettings: JudgeRequestSettings
 ) => {
 	let completed = 0;
 	let failed = 0;
@@ -81,7 +89,7 @@ const runScoring = async (
 		work.map((item) =>
 			limiter.schedule(async () => {
 				try {
-					await scoreAndStore(contestId, item.entry, item.model, prompt);
+					await scoreAndStore(contestId, item.entry, item.model, prompt, requestSettings);
 					completed += 1;
 				} catch (err) {
 					failed += 1;
@@ -111,7 +119,12 @@ export const scoreContest = async (contestId: string) => {
 
 	await markScoring(contestId);
 
-	const { completed, failed } = await runScoring(contestId, work, target.config.prompts.score);
+	const { completed, failed } = await runScoring(
+		contestId,
+		work,
+		target.config.prompts.score,
+		target.config.judge.requestSettings
+	);
 	const coverage = auditScoreCoverage(
 		entries,
 		target.config.panel,
