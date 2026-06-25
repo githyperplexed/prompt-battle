@@ -29,6 +29,13 @@
       "when": 1782331140356,
       "tag": "0003_first_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782390914573,
+      "tag": "0004_bracket_fingerprint",
+      "breakpoints": true
     }
   ]
 }

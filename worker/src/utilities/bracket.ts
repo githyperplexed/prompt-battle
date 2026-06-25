@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export const nextPowerOfTwo = (n: number): number => {
 	let size = 1;
 
@@ -21,6 +23,24 @@ export const seedOrder = (size: number): number[] => {
 	}
 
 	return seeds;
+};
+
+export type BracketFingerprintSeed = {
+	id: string;
+	rank: number;
+	seed: number;
+	absoluteScore: number;
+};
+
+export const bracketFingerprint = (seeded: BracketFingerprintSeed[]): string => {
+	const payload = seeded.map((entry) => ({
+		id: entry.id,
+		rank: entry.rank,
+		seed: entry.seed,
+		absoluteScore: entry.absoluteScore
+	}));
+
+	return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 };
 
 type Vote = { modelId: string; chosenEntryId: string };

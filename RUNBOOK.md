@@ -90,11 +90,34 @@ until every eligible entry has exactly one score from each panel model and the c
 bun run worker advance --contest <id>
 ```
 
-Ranks entries by absolute score, takes the **top 64**, seeds them, and runs the
-single-elimination bracket (3 models × both orderings per matchup, majority vote, deadlock to
-the higher seed) down to one winner. Materializes per-entry `absolute_score` / `rank` / `seed`
-/ `final_round` and the contest's `winner_entry_id`, then sets status `complete`. Resume-safe;
-~378 calls.
+Ranks entries by absolute score, takes the **top 64**, seeds them, stores a
+`bracket_fingerprint` for that seeded field, and runs the single-elimination bracket (3 models
+× both orderings per matchup, majority vote, deadlock to the higher seed) down to one winner.
+Materializes per-entry `absolute_score` / `rank` / `seed` / `final_round` and the contest's
+`winner_entry_id`, then sets status `complete`. Resume-safe only when the recomputed seeded
+field matches the stored fingerprint; ~378 calls.
+
+#### Recovering from bracket fingerprint mismatch
+
+If `advance` fails with a bracket fingerprint mismatch, stop. It means existing bracket state
+belongs to a different top-64 seed field than the one current scores/ranking now produce. Do
+not keep rerunning; choose which timeline is authoritative:
+
+- **Old bracket is authoritative:** use this if the bracket was already public, or if the
+  existing partial bracket is the run you want to preserve. Restore the score rows and any
+  ranking-affecting code/config that produced the stored fingerprint, then rerun normal
+  `advance`.
+- **New scored field is authoritative:** use this only when the old bracket rows are private,
+  partial, or known bad. Reset the private bracket state explicitly:
+
+```bash
+bun run worker advance --contest <id> --reset-bracket
+```
+
+This reset is allowed only while the contest status is `scored` (not `complete`). It deletes
+matchups/comparisons for the contest, clears bracket-only entry fields, clears
+`winner_entry_id`, and clears `bracket_fingerprint`. It does not change scores. After reset,
+rerun normal `advance --contest <id>` to compute a fresh fingerprint and bracket.
 
 ### 5. Publish results ⬜
 

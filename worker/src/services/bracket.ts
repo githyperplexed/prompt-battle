@@ -1,21 +1,38 @@
 import Bottleneck from "bottleneck";
 
-import { comparison, contest, db, entry, eq, matchup, score } from "@prompt-battle/db";
+import { comparison, contest, db, entry, eq, matchup, score, sql } from "@prompt-battle/db";
 
 import { BRACKET_SIZE } from "$src/constants";
 import { parseContestConfig, type ContestConfig } from "$src/utilities/contest-config";
-import { nextPowerOfTwo, seedOrder, tallyMatchup } from "$src/utilities/bracket";
+import {
+	bracketFingerprint,
+	nextPowerOfTwo,
+	seedOrder,
+	tallyMatchup
+} from "$src/utilities/bracket";
 import { aggregateTotals, rankEntries } from "$src/utilities/ranking";
 import { compareEntries } from "$src/services/judge";
 
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });
 const RESULT_CHUNK = 50;
 
-type Seeded = { id: string; seed: number; text: string };
+type Seeded = {
+	id: string;
+	seed: number;
+	rank: number;
+	absoluteScore: number;
+	text: string;
+};
 
-const persistRankings = async (
-	rows: { id: string; absoluteScore: number; rank: number; seed: number | null }[]
-) => {
+type RankedEntry = {
+	id: string;
+	text: string;
+	absoluteScore: number;
+	rank: number;
+	seed: number | null;
+};
+
+const persistRankings = async (rows: RankedEntry[]) => {
 	for (let i = 0; i < rows.length; i += RESULT_CHUNK) {
 		await Promise.all(
 			rows
@@ -30,7 +47,9 @@ const persistRankings = async (
 	}
 };
 
-const rankAndSeed = async (contestId: string): Promise<Seeded[]> => {
+const loadRankedField = async (
+	contestId: string
+): Promise<{ ranked: RankedEntry[]; seeded: Seeded[]; fingerprint: string }> => {
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
 		columns: { id: true, text: true, publishedAt: true }
@@ -57,19 +76,68 @@ const rankAndSeed = async (contestId: string): Promise<Seeded[]> => {
 		return [{ id: e.id, text: e.text, publishedAt: e.publishedAt, ...aggregateTotals(totals) }];
 	});
 
-	const ranked = rankEntries(rankable);
+	const ranked = rankEntries(rankable).map((e, i) => ({
+		id: e.id,
+		text: e.text,
+		absoluteScore: e.absoluteScore,
+		rank: i + 1,
+		seed: i < BRACKET_SIZE ? i + 1 : null
+	}));
+	const seeded = ranked.slice(0, BRACKET_SIZE).map((e) => ({
+		id: e.id,
+		seed: e.seed ?? e.rank,
+		rank: e.rank,
+		absoluteScore: e.absoluteScore,
+		text: e.text
+	}));
+	const fingerprint = bracketFingerprint(seeded);
 
-	await persistRankings(
-		ranked.map((e, i) => ({
-			id: e.id,
-			absoluteScore: e.absoluteScore,
-			rank: i + 1,
-			seed: i < BRACKET_SIZE ? i + 1 : null
-		}))
-	);
-
-	return ranked.slice(0, BRACKET_SIZE).map((e, i) => ({ id: e.id, seed: i + 1, text: e.text }));
+	return { ranked, seeded, fingerprint };
 };
+
+const ensureBracketFingerprint = async (contestId: string, fingerprint: string) =>
+	db.transaction(async (tx) => {
+		await tx.execute(sql`select 1 from ${contest} where ${contest.id} = ${contestId} for update`);
+
+		const target = await tx.query.contest.findFirst({
+			where: (c, { eq }) => eq(c.id, contestId),
+			columns: { id: true, status: true, bracketFingerprint: true }
+		});
+
+		if (!target) throw new Error(`No contest with id ${contestId}`);
+
+		if (target.status !== "scored") {
+			return { skipped: true as const, status: target.status };
+		}
+
+		if (target.bracketFingerprint === fingerprint) {
+			return { skipped: false as const };
+		}
+
+		if (target.bracketFingerprint) {
+			throw new Error(
+				`Bracket fingerprint mismatch for contest ${contestId}. Stored ${target.bracketFingerprint}, computed ${fingerprint}. See RUNBOOK.md "Recovering from bracket fingerprint mismatch" before continuing.`
+			);
+		}
+
+		const existingMatchup = await tx.query.matchup.findFirst({
+			where: (m, { eq }) => eq(m.contestId, contestId),
+			columns: { id: true }
+		});
+
+		if (existingMatchup) {
+			throw new Error(
+				`Contest ${contestId} has bracket rows but no bracket fingerprint. Run advance --contest ${contestId} --reset-bracket if those rows are private/bad, or restore the original bracket state before continuing.`
+			);
+		}
+
+		await tx
+			.update(contest)
+			.set({ bracketFingerprint: fingerprint })
+			.where(eq(contest.id, contestId));
+
+		return { skipped: false as const };
+	});
 
 const getOrCreateMatchup = async (
 	contestId: string,
@@ -239,6 +307,34 @@ const finalize = async (
 		.where(eq(contest.id, contestId));
 };
 
+export const resetBracket = async (contestId: string) =>
+	db.transaction(async (tx) => {
+		await tx.execute(sql`select 1 from ${contest} where ${contest.id} = ${contestId} for update`);
+
+		const target = await tx.query.contest.findFirst({
+			where: (c, { eq }) => eq(c.id, contestId),
+			columns: { id: true, status: true }
+		});
+
+		if (!target) throw new Error(`No contest with id ${contestId}`);
+
+		if (target.status !== "scored") {
+			return { skipped: true as const, status: target.status };
+		}
+
+		await tx.delete(matchup).where(eq(matchup.contestId, contestId));
+		await tx
+			.update(entry)
+			.set({ seed: null, finalRound: null })
+			.where(eq(entry.contestId, contestId));
+		await tx
+			.update(contest)
+			.set({ bracketFingerprint: null, winnerEntryId: null })
+			.where(eq(contest.id, contestId));
+
+		return { skipped: false as const };
+	});
+
 export const advanceContest = async (contestId: string) => {
 	const target = await db.query.contest.findFirst({
 		where: (c, { eq }) => eq(c.id, contestId),
@@ -253,11 +349,20 @@ export const advanceContest = async (contestId: string) => {
 		return { skipped: true as const, status: target.status };
 	}
 
-	const seeded = await rankAndSeed(contestId);
-	const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
+	const { ranked, seeded, fingerprint } = await loadRankedField(contestId);
+	const bracket = await ensureBracketFingerprint(contestId, fingerprint);
 
-	await finalize(contestId, champion, eliminatedRound, rounds);
-	await limiter.disconnect();
+	if (bracket.skipped) return bracket;
 
-	return { skipped: false as const, entrants: seeded.length, rounds, champion };
+	await persistRankings(ranked);
+
+	try {
+		const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
+
+		await finalize(contestId, champion, eliminatedRound, rounds);
+
+		return { skipped: false as const, entrants: seeded.length, rounds, champion, fingerprint };
+	} finally {
+		await limiter.disconnect();
+	}
 };
