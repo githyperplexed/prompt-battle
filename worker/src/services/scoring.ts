@@ -10,6 +10,7 @@ import {
 } from "$src/utilities/contest-config";
 import { auditScoreCoverage, buildWorkList } from "$src/utilities/scoring";
 import { scoreEntry } from "$src/services/judge";
+import { withContestLock } from "$src/services/locks";
 
 // ≤10 in flight, and a new request started at most every 200ms (5 req/s).
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });
@@ -105,41 +106,42 @@ const runScoring = async (
 	return { completed, failed };
 };
 
-export const scoreContest = async (contestId: string) => {
-	const target = await loadContest(contestId);
+export const scoreContest = async (contestId: string) =>
+	withContestLock(contestId, async () => {
+		const target = await loadContest(contestId);
 
-	if (target.status !== "snapshotted" && target.status !== "scoring") {
-		return { skipped: true as const, status: target.status };
-	}
+		if (target.status !== "snapshotted" && target.status !== "scoring") {
+			return { skipped: true as const, status: target.status };
+		}
 
-	const entries = await loadEligibleEntries(contestId);
-	const scored = await loadScoredPairs(contestId);
-	const done = new Set(scored.map((row) => row.entryId + ":" + row.modelId));
-	const work = buildWorkList(entries, target.config.panel, done);
+		const entries = await loadEligibleEntries(contestId);
+		const scored = await loadScoredPairs(contestId);
+		const done = new Set(scored.map((row) => row.entryId + ":" + row.modelId));
+		const work = buildWorkList(entries, target.config.panel, done);
 
-	await markScoring(contestId);
+		await markScoring(contestId);
 
-	const { completed, failed } = await runScoring(
-		contestId,
-		work,
-		target.config.prompts.score,
-		target.config.judge.requestSettings
-	);
-	const coverage = auditScoreCoverage(
-		entries,
-		target.config.panel,
-		await loadScoredPairs(contestId)
-	);
+		const { completed, failed } = await runScoring(
+			contestId,
+			work,
+			target.config.prompts.score,
+			target.config.judge.requestSettings
+		);
+		const coverage = auditScoreCoverage(
+			entries,
+			target.config.panel,
+			await loadScoredPairs(contestId)
+		);
 
-	if (coverage.complete) await markScored(contestId);
+		if (coverage.complete) await markScored(contestId);
 
-	return {
-		skipped: false as const,
-		total: work.length,
-		completed,
-		failed,
-		complete: coverage.complete,
-		missing: coverage.missing,
-		unexpected: coverage.unexpected
-	};
-};
+		return {
+			skipped: false as const,
+			total: work.length,
+			completed,
+			failed,
+			complete: coverage.complete,
+			missing: coverage.missing,
+			unexpected: coverage.unexpected
+		};
+	});

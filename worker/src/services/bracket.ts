@@ -13,6 +13,7 @@ import {
 } from "$src/utilities/bracket";
 import { aggregateTotals, rankEntries } from "$src/utilities/ranking";
 import { compareEntries } from "$src/services/judge";
+import { withContestLock } from "$src/services/locks";
 
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });
 const RESULT_CHUNK = 50;
@@ -128,7 +129,7 @@ const ensureBracketFingerprint = async (contestId: string, fingerprint: string) 
 
 		if (existingMatchup) {
 			throw new Error(
-				`Contest ${contestId} has bracket rows but no bracket fingerprint. Run advance --contest ${contestId} --reset-bracket if those rows are private/bad, or restore the original bracket state before continuing.`
+				`Contest ${contestId} has bracket rows but no bracket fingerprint. Run reset --contest ${contestId} --to scored if those rows are private/bad, or restore the original bracket state before continuing.`
 			);
 		}
 
@@ -324,62 +325,35 @@ const finalize = async (
 		.where(eq(contest.id, contestId));
 };
 
-export const resetBracket = async (contestId: string) =>
-	db.transaction(async (tx) => {
-		await tx.execute(sql`select 1 from ${contest} where ${contest.id} = ${contestId} for update`);
-
-		const target = await tx.query.contest.findFirst({
+export const advanceContest = async (contestId: string) =>
+	withContestLock(contestId, async () => {
+		const target = await db.query.contest.findFirst({
 			where: (c, { eq }) => eq(c.id, contestId),
-			columns: { id: true, status: true }
+			columns: { id: true, status: true, config: true }
 		});
 
 		if (!target) throw new Error(`No contest with id ${contestId}`);
+
+		const config = parseContestConfig(target.config);
 
 		if (target.status !== "scored") {
 			return { skipped: true as const, status: target.status };
 		}
 
-		await tx.delete(matchup).where(eq(matchup.contestId, contestId));
-		await tx
-			.update(entry)
-			.set({ seed: null, finalRound: null })
-			.where(eq(entry.contestId, contestId));
-		await tx
-			.update(contest)
-			.set({ bracketFingerprint: null, winnerEntryId: null })
-			.where(eq(contest.id, contestId));
+		const { ranked, seeded, fingerprint } = await loadRankedField(contestId);
+		const bracket = await ensureBracketFingerprint(contestId, fingerprint);
 
-		return { skipped: false as const };
+		if (bracket.skipped) return bracket;
+
+		await persistRankings(ranked);
+
+		try {
+			const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
+
+			await finalize(contestId, champion, eliminatedRound, rounds);
+
+			return { skipped: false as const, entrants: seeded.length, rounds, champion, fingerprint };
+		} finally {
+			await limiter.disconnect();
+		}
 	});
-
-export const advanceContest = async (contestId: string) => {
-	const target = await db.query.contest.findFirst({
-		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { id: true, status: true, config: true }
-	});
-
-	if (!target) throw new Error(`No contest with id ${contestId}`);
-
-	const config = parseContestConfig(target.config);
-
-	if (target.status !== "scored") {
-		return { skipped: true as const, status: target.status };
-	}
-
-	const { ranked, seeded, fingerprint } = await loadRankedField(contestId);
-	const bracket = await ensureBracketFingerprint(contestId, fingerprint);
-
-	if (bracket.skipped) return bracket;
-
-	await persistRankings(ranked);
-
-	try {
-		const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
-
-		await finalize(contestId, champion, eliminatedRound, rounds);
-
-		return { skipped: false as const, entrants: seeded.length, rounds, champion, fingerprint };
-	} finally {
-		await limiter.disconnect();
-	}
-};

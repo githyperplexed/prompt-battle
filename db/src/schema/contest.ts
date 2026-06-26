@@ -22,5 +22,6 @@ export const contest = pgTable("contest", {
 	config: jsonb(),
 	winnerEntryId: text(),
 	bracketFingerprint: text(),
+	resultsPublishedAt: timestamp({ withTimezone: true }),
 	createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 });

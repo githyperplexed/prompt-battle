@@ -5,7 +5,16 @@ import { parseArgs } from "node:util";
 
 import { pool } from "@prompt-battle/db";
 
-const COMMANDS = ["create", "ingest", "score", "advance", "smoke"] as const;
+const COMMANDS = [
+	"create",
+	"ingest",
+	"score",
+	"advance",
+	"reset",
+	"delete",
+	"publish",
+	"smoke"
+] as const;
 type Command = (typeof COMMANDS)[number];
 
 const main = async () => {
@@ -35,6 +44,24 @@ const main = async () => {
 			const { runAdvance } = await import("$src/advance");
 
 			await runAdvance();
+			break;
+		}
+		case "reset": {
+			const { runReset } = await import("$src/reset");
+
+			await runReset();
+			break;
+		}
+		case "delete": {
+			const { runDelete } = await import("$src/delete");
+
+			await runDelete();
+			break;
+		}
+		case "publish": {
+			const { runPublish } = await import("$src/publish");
+
+			await runPublish();
 			break;
 		}
 		case "smoke": {
