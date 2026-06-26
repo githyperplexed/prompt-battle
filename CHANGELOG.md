@@ -160,6 +160,62 @@ tampered, or legacy unversioned configuration fails closed with no fallback.
 
 ---
 
+## Phase 14 — Pre-launch hardening
+
+A pass of correctness/safety fixes before any live run:
+
+- **Atomic ingest.** All prep (fetch, moderation, row-building) runs before a single locked
+  transaction that replaces entries and flips status together — no partial/hybrid frozen field
+  if a run crashes or a second worker overlaps. Moderation retries transient `429`/`5xx` and
+  honors `Retry-After`; a moderation failure leaves the contest `open`.
+- **Bracket fingerprint.** `advance` fingerprints the ranked top-64 field and refuses to resume
+  bracket rows belonging to a different scored field, instead of grafting a stale bracket onto
+  new seeds.
+- **Incomplete-fetch refusal.** Ingest aborts rather than freeze a partial field when the
+  YouTube fetch can't exhaust pagination within the cap (newest-first order would drop the
+  oldest comments).
+- **Judge audit metadata.** Scoring/comparison record request settings, finish reason, usage,
+  and provider metadata; docs reframed from "exact replay" to "independent auditability."
+- **DB boundary constraints.** Composite foreign keys keep score/matchup rows inside their
+  contest, and the bracket asserts every recorded/fresh choice is one of the matchup's two
+  entries.
+
+## Phase 15 — Operational commands & ingest controls
+
+Made the pipeline safe to drive and recover by hand:
+
+- **`reset --to <open|snapshotted|scored>`** unwinds a contest to an earlier stage, deleting
+  only what later stages produced and refusing to skip levels (downstream rows are never
+  stranded). Folds in the old bracket reset and also handles a finished (`complete`) contest.
+- **`delete --contest <id> --force`** discards a contest and all its rows — the path for
+  changing the prompts/panel, which are frozen at `create`.
+- **Per-contest operation lock.** `score`/`advance` hold a Postgres advisory lock for their
+  whole run; `reset`/`delete` fail fast if a job is active, closing the race where a reset could
+  be undone by in-flight writes.
+- **Ingest controls.** `--max-entries` / `--max-comments` caps and a testing-only
+  `--skip-moderation`; ingest also de-duplicates comments YouTube returns on overlapping pages
+  (a real bug the dry run surfaced) and reports a fetched/unique/stored breakdown.
+
+## Phase 16 — Results embargo
+
+Decoupled "pipeline finished" from "results public": a nullable `contest.results_published_at`
+plus a `publish` command (with `--unpublish`). The web UI gates `scored`/`complete` behind it —
+showing a "results locked until the reveal" screen and not even loading the leaderboard/bracket —
+so finishing the bracket privately can't spoil the reveal video.
+
+## Phase 17 — Web contest-status UI
+
+Built the `web` SvelteKit app: one page that loads contest state server-side and renders a
+phase-specific component tree (`open` → `snapshotted` → `scoring` → `scored` → `complete`, plus
+`locked` / `draft` / `not-found`). Deep-indigo theme with gold as the prize accent, Lexend prose
+and Space Mono numerals. Highlights — a live countdown, a judging-progress radial, a leaderboard
+with the top-64 cut line and a per-entry 3×4 score matrix, and the 64→1 bracket with SVG elbow
+connectors and a lazy per-matchup vote panel. Files split by kind (`types/`, `utilities/`,
+server `services/`, kebab-case components); a dev-only `?phase=` override (clickable from the
+stepper) previews any phase.
+
+---
+
 ## Notable cross-cutting decisions
 
 - **Resume everywhere.** Every command is idempotent and re-runnable; progress is checkpointed
@@ -170,6 +226,7 @@ tampered, or legacy unversioned configuration fails closed with no fallback.
 
 ## Not yet done
 
-- A real end-to-end dry run on a small video (ingest → score → advance writing live rows).
-- The `web` UI (display entries, scores, rounds, champion).
+- A real end-to-end dry run on a small video, writing live rows (in progress).
+- Publishing the audit bundle for the public record (the embargo + `publish` flag exist; the
+  export of entries/scores/decisions does not).
 - Deployment (Railway web service + the `ingest --due` cron).

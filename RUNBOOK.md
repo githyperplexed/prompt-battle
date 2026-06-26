@@ -56,9 +56,19 @@ bun run worker ingest --contest <id>     # snapshot one contest manually
 bun run worker ingest --due              # cron mode: snapshot any contest past its cutoff
 ```
 
+Optional flags (defaults match the engine constants):
+
+- `--max-entries <n>` — cap eligible entries (default `10000`).
+- `--max-comments <n>` — cap the fetch window (default `100000`); the snapshot still aborts if
+  pagination has more pages at the cap rather than freezing a partial field.
+- `--skip-moderation` — **testing only**; bypasses the OpenAI content screen (no `tos`
+  disqualifications). It prints a warning; never use it for a real contest.
+
 Fetches all top-level comments, validates each (length 50–1,000, all 3 keywords, no URLs,
 one-per-channel by earliest timestamp, no post-cutoff edit, OpenAI content moderation →
-`tos`), and freezes them as `entry` rows — eligible and disqualified-with-reason. Comments
+`tos`), de-duplicates comments YouTube returns on overlapping pages, and freezes them as
+`entry` rows — eligible and disqualified-with-reason. The run reports a
+`fetched / after-cutoff / duplicates / unique / stored / eligible` breakdown. Comments
 published after the cutoff are not entries; comments edited after it are stored with
 `edited_after_cutoff`. Publication/update exactly at the cutoff is accepted. The contest's
 actual capture start is stored in `captured_at`. Run at or just after the cutoff. Affiliated
@@ -115,20 +125,47 @@ not keep rerunning; choose which timeline is authoritative:
   ranking-affecting code/config that produced the stored fingerprint, then rerun normal
   `advance`.
 - **New scored field is authoritative:** use this only when the old bracket rows are private,
-  partial, or known bad. Reset the private bracket state explicitly:
+  partial, or known bad. Reset the bracket explicitly, then rerun `advance`:
 
 ```bash
-bun run worker advance --contest <id> --reset-bracket
+bun run worker reset --contest <id> --to scored
+bun run worker advance --contest <id>
 ```
 
-This reset is allowed only while the contest status is `scored` (not `complete`). It deletes
-matchups/comparisons for the contest, clears bracket-only entry fields, clears
-`winner_entry_id`, and clears `bracket_fingerprint`. It does not change scores. After reset,
-rerun normal `advance --contest <id>` to compute a fresh fingerprint and bracket.
+`reset --to scored` deletes matchups/comparisons, clears the materialized bracket columns, and
+clears `winner_entry_id` / `bracket_fingerprint` (it does not touch scores). It is valid from
+`scored` (a partial bracket) or `complete` (a finished one).
 
-### 5. Publish results ⬜
+### Resets & deletion
 
-Export the audit bundle for the public record and surface it in the web UI:
+`reset --contest <id> --to <stage>` unwinds a contest to an earlier stage, deleting everything
+produced after it (in one locked transaction). It refuses to skip levels, so you cannot strand
+downstream rows:
+
+- `--to scored` — drop the bracket (from `scored` or `complete`); keeps scores.
+- `--to snapshotted` — drop scores and the bracket (from `scoring`/`scored`/`complete`); keeps
+  the frozen field.
+- `--to open` — drop the frozen field and everything after (from `snapshotted` onward); re-run
+  `ingest` to re-snapshot.
+
+To discard a contest entirely (e.g. to change the pinned prompts/panel, which are frozen at
+`create`), use `delete --contest <id> --force` — it cascades all entries, scores, and bracket
+rows. There is no in-place config edit by design.
+
+### 5. Publish results 🚧
+
+The web UI reads contest state live, but `scored` and `complete` are **embargoed** until results
+are explicitly published — the public site shows a "results locked until the reveal" screen so
+finishing the bracket privately doesn't spoil the reveal video. Lift the embargo when the video
+is live:
+
+```
+bun run worker publish --contest <id>                 # publish now (requires scored/complete)
+bun run worker publish --contest <id> --at <iso>      # publish at a specific time
+bun run worker publish --contest <id> --unpublish     # re-embargo
+```
+
+Still to build: export the full audit bundle for the public record —
 
 - contest config (`panel`, prompt hashes/text, keyword hash, judge request settings);
 - revealed keywords and salt;
