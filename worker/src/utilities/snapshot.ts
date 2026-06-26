@@ -31,6 +31,7 @@ export type SnapshotRowsResult = {
 	comments: SnapshotComment[];
 	rows: SnapshotEntryRow[];
 	afterCutoff: number;
+	unique: number;
 	eligible: number;
 };
 
@@ -76,10 +77,16 @@ export const buildSnapshotRows = ({
 	inScopeComments.sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
 
 	const countedChannels = new Set<string>();
+	const seenComments = new Set<string>();
 	const rows: SnapshotEntryRow[] = [];
 	let eligible = 0;
 
 	for (const comment of inScopeComments) {
+		// YouTube pagination can return the same comment on overlapping pages; one row per id.
+		if (seenComments.has(comment.commentId)) continue;
+
+		seenComments.add(comment.commentId);
+
 		let status: "eligible" | "disqualified";
 		let reason: SnapshotEntryRow["dqReason"] = null;
 
@@ -125,6 +132,7 @@ export const buildSnapshotRows = ({
 		comments: inScopeComments,
 		rows,
 		afterCutoff: comments.length - inScopeComments.length,
+		unique: seenComments.size,
 		eligible
 	};
 };

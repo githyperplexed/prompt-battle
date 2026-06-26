@@ -139,6 +139,25 @@ describe("snapshot row building", () => {
 		});
 
 		expect(result.eligible).toBe(1);
+		expect(result.unique).toBe(3);
 		expect(result.rows.map((row) => row.youtubeCommentId)).toEqual(["eligible", "duplicate"]);
+	});
+
+	test("deduplicates comments that YouTube pagination returns more than once", () => {
+		const result = buildSnapshotRows({
+			contestId: "contest-1",
+			comments: [
+				comment({ commentId: "repeat", channelId: "channel-1" }),
+				comment({ commentId: "repeat", channelId: "channel-1" })
+			],
+			snapshotAt: cutoff,
+			keywords: ["alpha", "beta"],
+			excluded: new Set(),
+			flaggedCommentIds: new Set()
+		});
+
+		expect(result.unique).toBe(1);
+		expect(result.eligible).toBe(1);
+		expect(result.rows.map((row) => row.youtubeCommentId)).toEqual(["repeat"]);
 	});
 });

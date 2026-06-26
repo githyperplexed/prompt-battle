@@ -50,7 +50,10 @@ const commitSnapshotRows = async ({
 		return { skipped: false as const };
 	});
 
-export const snapshotContest = async (contestId: string) => {
+export const snapshotContest = async (
+	contestId: string,
+	options: { maxEntries?: number; maxComments?: number; skipModeration?: boolean } = {}
+) => {
 	const target = await db.query.contest.findFirst({
 		where: (c, { eq }) => eq(c.id, contestId)
 	});
@@ -77,7 +80,7 @@ export const snapshotContest = async (contestId: string) => {
 	}
 
 	const excluded = await resolveExcludedChannels();
-	const fetched = await fetchAllComments(target.videoId);
+	const fetched = await fetchAllComments(target.videoId, { maxComments: options.maxComments });
 
 	if (!fetched.complete) {
 		throw new Error(
@@ -86,15 +89,20 @@ export const snapshotContest = async (contestId: string) => {
 	}
 
 	const comments = fetched.comments;
-	const moderationCandidates = comments.filter(
-		(comment) => comment.publishedAt.getTime() <= target.snapshotAt.getTime()
-	);
-	const flags = await flagViolations(moderationCandidates.map((c) => c.text));
 	const flagged = new Set<string>();
 
-	moderationCandidates.forEach((comment, i) => {
-		if (flags[i]) flagged.add(comment.commentId);
-	});
+	// Testing escape hatch (--skip-moderation): leaves `flagged` empty, so no entry is
+	// disqualified as `tos`. Production runs always moderate.
+	if (!options.skipModeration) {
+		const moderationCandidates = comments.filter(
+			(comment) => comment.publishedAt.getTime() <= target.snapshotAt.getTime()
+		);
+		const flags = await flagViolations(moderationCandidates.map((c) => c.text));
+
+		moderationCandidates.forEach((comment, i) => {
+			if (flags[i]) flagged.add(comment.commentId);
+		});
+	}
 
 	const prepared = buildSnapshotRows({
 		contestId: target.id,
@@ -102,7 +110,8 @@ export const snapshotContest = async (contestId: string) => {
 		snapshotAt: target.snapshotAt,
 		keywords: secret.keywords,
 		excluded,
-		flaggedCommentIds: flagged
+		flaggedCommentIds: flagged,
+		maxEntries: options.maxEntries
 	});
 	const rows = prepared.rows.map(toEntryInsert);
 	const commit = await commitSnapshotRows({ contestId: target.id, rows, capturedAt });
@@ -113,12 +122,15 @@ export const snapshotContest = async (contestId: string) => {
 		skipped: false as const,
 		total: comments.length,
 		afterCutoff: prepared.afterCutoff,
+		unique: prepared.unique,
 		stored: rows.length,
 		eligible: prepared.eligible
 	};
 };
 
-export const snapshotDueContests = async () => {
+export const snapshotDueContests = async (
+	options: { maxEntries?: number; maxComments?: number; skipModeration?: boolean } = {}
+) => {
 	const due = await db.query.contest.findMany({
 		where: (c, { and, eq, lte }) => and(eq(c.status, "open"), lte(c.snapshotAt, new Date())),
 		columns: { id: true }
@@ -127,7 +139,7 @@ export const snapshotDueContests = async () => {
 	const results = [];
 
 	for (const d of due) {
-		results.push({ id: d.id, ...(await snapshotContest(d.id)) });
+		results.push({ id: d.id, ...(await snapshotContest(d.id, options)) });
 	}
 
 	return results;
