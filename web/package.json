@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@prompt-battle/db": "workspace:*",
 		"clsx": "^2.1.1",
+		"dotenv": "^17.4.2",
 		"tailwind-merge": "^3.4.0"
 	},
 	"devDependencies": {
