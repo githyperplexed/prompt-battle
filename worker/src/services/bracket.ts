@@ -227,7 +227,16 @@ const resolveMatchup = async (
 					first,
 					second,
 					config.prompts.compare,
-					config.judge.requestSettings
+					config.judge.requestSettings,
+					{
+						functionId: "compare-entries",
+						metadata: {
+							contestId,
+							matchupId: row.id,
+							modelId: p.model.id,
+							orderSwapped: p.orderSwapped
+						}
+					}
 				);
 
 				// "A" is whichever entry was presented first; map back to the canonical entry.

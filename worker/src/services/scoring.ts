@@ -58,7 +58,10 @@ const scoreAndStore = async (
 		score: result,
 		nonce,
 		audit
-	} = await scoreEntry(model.slug, entry.text, prompt, requestSettings);
+	} = await scoreEntry(model.slug, entry.text, prompt, requestSettings, {
+		functionId: "score-entry",
+		metadata: { contestId, entryId: entry.id, modelId: model.id }
+	});
 
 	await db
 		.insert(score)

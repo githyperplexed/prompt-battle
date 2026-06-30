@@ -8,6 +8,7 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@latitude-data/telemetry": "^3.3.0",
 		"@openrouter/ai-sdk-provider": "^2.9.1",
 		"@prompt-battle/db": "workspace:*",
 		"ai": "^6.0.209",

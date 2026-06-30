@@ -1,3 +1,4 @@
+import { capture } from "@latitude-data/telemetry";
 import { generateText, Output } from "ai";
 
 import { compareSchema, scoreSchema, type Comparison, type Score } from "$src/schemas";
@@ -10,6 +11,21 @@ import {
 } from "$src/utilities/prompts";
 import { clampScore } from "$src/utilities/score";
 import { model } from "$src/services/models";
+
+// Optional Latitude trace context: `functionId` names the trace, `metadata` tags it for filtering
+// (contestId, entryId/matchupId, modelId). Absent → the call runs untraced.
+export type JudgeTelemetry = {
+	functionId: string;
+	metadata?: Record<string, string | number | boolean>;
+};
+
+const telemetrySettings = (telemetry: JudgeTelemetry | undefined) =>
+	telemetry && {
+		isEnabled: true,
+		recordInputs: true,
+		recordOutputs: true,
+		functionId: telemetry.functionId
+	};
 
 export type JudgeAuditMetadata = {
 	requestSettings: JudgeRequestSettings;
@@ -45,18 +61,31 @@ export const scoreEntry = async (
 	slug: string,
 	entryText: string,
 	prompt: PromptSections,
-	requestSettings: JudgeRequestSettings
+	requestSettings: JudgeRequestSettings,
+	telemetry?: JudgeTelemetry
 ): Promise<ScoreResult> => {
 	const { system, user, nonce } = buildScoreMessages(prompt, entryText);
-	const result = await generateText({
-		model: model(slug),
-		messages: buildJudgeMessages(system, user),
-		output: Output.object({ schema: scoreSchema }),
-		allowSystemInMessages: true,
-		...callSettings(requestSettings)
-	});
 
-	return { score: clampScore(result.output), nonce, audit: auditMetadata(result, requestSettings) };
+	const exec = async () => {
+		const result = await generateText({
+			model: model(slug),
+			messages: buildJudgeMessages(system, user),
+			output: Output.object({ schema: scoreSchema }),
+			allowSystemInMessages: true,
+			experimental_telemetry: telemetrySettings(telemetry),
+			...callSettings(requestSettings)
+		});
+
+		return {
+			score: clampScore(result.output),
+			nonce,
+			audit: auditMetadata(result, requestSettings)
+		};
+	};
+
+	if (!telemetry) return exec();
+
+	return capture(telemetry.functionId, exec, { metadata: telemetry.metadata });
 };
 
 export const compareEntries = async (
@@ -64,16 +93,25 @@ export const compareEntries = async (
 	entryA: string,
 	entryB: string,
 	prompt: PromptSections,
-	requestSettings: JudgeRequestSettings
+	requestSettings: JudgeRequestSettings,
+	telemetry?: JudgeTelemetry
 ): Promise<ComparisonResult> => {
 	const { system, user } = buildCompareMessages(prompt, entryA, entryB);
-	const result = await generateText({
-		model: model(slug),
-		messages: buildJudgeMessages(system, user),
-		output: Output.object({ schema: compareSchema }),
-		allowSystemInMessages: true,
-		...callSettings(requestSettings)
-	});
 
-	return { comparison: result.output, audit: auditMetadata(result, requestSettings) };
+	const exec = async () => {
+		const result = await generateText({
+			model: model(slug),
+			messages: buildJudgeMessages(system, user),
+			output: Output.object({ schema: compareSchema }),
+			allowSystemInMessages: true,
+			experimental_telemetry: telemetrySettings(telemetry),
+			...callSettings(requestSettings)
+		});
+
+		return { comparison: result.output, audit: auditMetadata(result, requestSettings) };
+	};
+
+	if (!telemetry) return exec();
+
+	return capture(telemetry.functionId, exec, { metadata: telemetry.metadata });
 };

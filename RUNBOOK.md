@@ -15,8 +15,28 @@ prompts see [prompts/](prompts/).
   - `YOUTUBE_API_KEY` — comment ingest; needed by `ingest`. ✅
   - `OPENAI_API_KEY` — content moderation at ingest; needed by `ingest`. ✅
   - `EXCLUDED_CHANNELS` — optional; comma-separated `@handles` / `UC…` ids to exclude (owner, mods).
+  - `LATITUDE_API_KEY` / `LATITUDE_PROJECT_SLUG` — optional; both enable Latitude AI telemetry for
+    `score`, `advance`, and `smoke` (see [Telemetry](#telemetry-optional)). Absent → tracing is off.
 - **Database migrated:** `bun run db:migrate`. (Schema changes: the maintainer runs
   `db:generate` + `db:migrate` — do not run them automatically.)
+
+## Telemetry (optional)
+
+`score`, `advance`, and `smoke` emit OpenTelemetry traces to [Latitude](https://latitude.so) for
+live cost/latency/trace visibility while running batches and tuning judge prompts. It is **opt-in
+and credentials-based**: set both `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` to enable; with
+either absent, the Vercel AI SDK falls back to a no-op tracer and inference is unchanged. The worker
+flushes buffered spans on exit, so short-lived CLI runs don't drop traces. Each judge call is traced
+as `score-entry` / `compare-entries` with `contestId`, `entryId`/`matchupId`, and `modelId` metadata.
+
+This is **live observability layered on top of** the durable per-call audit already persisted to
+Postgres (`score.audit`, `comparison.audit`) — Postgres remains the authoritative, auditable record
+(rules.md §9); Latitude is not a source of truth for results.
+
+> **⚠️ Data retention (compliance).** Traces are captured with full inputs **and** outputs, so entry
+> comment text is sent to Latitude. YouTube API Terms require comment data to be deleted or refreshed
+> within **30 days** — configure Latitude's retention to ≤30 days (or purge on that cadence). This is
+> a Latitude-side setting, not enforced by this repo.
 
 ## Where each step runs
 

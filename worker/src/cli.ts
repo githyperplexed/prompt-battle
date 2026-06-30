@@ -18,68 +18,81 @@ const COMMANDS = [
 ] as const;
 type Command = (typeof COMMANDS)[number];
 
+// Only these commands make LLM calls, so only they register Latitude telemetry and pay the
+// flush-on-exit cost. The rest stay free of any tracing setup.
+const INFERENCE_COMMANDS = new Set<Command>(["score", "advance", "smoke"]);
+
 const main = async () => {
 	const { positionals } = parseArgs({ allowPositionals: true, strict: false });
 	const command = positionals[0] as Command | undefined;
 
-	switch (command) {
-		case "create": {
-			const { runCreate } = await import("$src/create");
+	// Register the telemetry provider before inference runs, and flush it in the finally below so a
+	// short-lived run never exits before its spans are exported.
+	const telemetry =
+		command && INFERENCE_COMMANDS.has(command) ? await import("$src/services/latitude") : null;
 
-			await runCreate();
-			break;
-		}
-		case "ingest": {
-			const { runIngest } = await import("$src/ingest");
+	try {
+		switch (command) {
+			case "create": {
+				const { runCreate } = await import("$src/create");
 
-			await runIngest();
-			break;
-		}
-		case "score": {
-			const { runScore } = await import("$src/score");
+				await runCreate();
+				break;
+			}
+			case "ingest": {
+				const { runIngest } = await import("$src/ingest");
 
-			await runScore();
-			break;
-		}
-		case "advance": {
-			const { runAdvance } = await import("$src/advance");
+				await runIngest();
+				break;
+			}
+			case "score": {
+				const { runScore } = await import("$src/score");
 
-			await runAdvance();
-			break;
-		}
-		case "reset": {
-			const { runReset } = await import("$src/reset");
+				await runScore();
+				break;
+			}
+			case "advance": {
+				const { runAdvance } = await import("$src/advance");
 
-			await runReset();
-			break;
-		}
-		case "delete": {
-			const { runDelete } = await import("$src/delete");
+				await runAdvance();
+				break;
+			}
+			case "reset": {
+				const { runReset } = await import("$src/reset");
 
-			await runDelete();
-			break;
-		}
-		case "publish": {
-			const { runPublish } = await import("$src/publish");
+				await runReset();
+				break;
+			}
+			case "delete": {
+				const { runDelete } = await import("$src/delete");
 
-			await runPublish();
-			break;
-		}
-		case "status": {
-			const { runStatus } = await import("$src/status");
+				await runDelete();
+				break;
+			}
+			case "publish": {
+				const { runPublish } = await import("$src/publish");
 
-			await runStatus();
-			break;
-		}
-		case "smoke": {
-			const { runSmoke } = await import("$src/smoke");
+				await runPublish();
+				break;
+			}
+			case "status": {
+				const { runStatus } = await import("$src/status");
 
-			await runSmoke();
-			break;
+				await runStatus();
+				break;
+			}
+			case "smoke": {
+				const { runSmoke } = await import("$src/smoke");
+
+				await runSmoke();
+				break;
+			}
+			default:
+				console.log(`Usage: worker <${COMMANDS.join(" | ")}>`);
+				if (command) process.exitCode = 1;
 		}
-		default:
-			console.log(`Usage: worker <${COMMANDS.join(" | ")}>`);
-			if (command) process.exitCode = 1;
+	} finally {
+		if (telemetry) await telemetry.shutdownTelemetry();
 	}
 };
 
