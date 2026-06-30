@@ -1,5 +1,6 @@
 import { count, db, entry, eq, matchup, score } from "@prompt-battle/db";
 
+import { BRACKET_SIZE } from "$src/constants";
 import { isSnapshotDue } from "$src/utilities/snapshot";
 import type { ContestSummary, StatusReport } from "$src/utilities/status";
 
@@ -103,7 +104,7 @@ export const loadStatusReport = async (contestId: string): Promise<StatusReport 
 
 		bracket = {
 			matchups: counted[0]?.n ?? 0,
-			expected: 63,
+			expected: BRACKET_SIZE - 1,
 			winner,
 			fingerprint: c.bracketFingerprint,
 			published: !!c.resultsPublishedAt

@@ -157,7 +157,7 @@ To discard a contest entirely (e.g. to change the pinned prompts/panel, which ar
 `create`), use `delete --contest <id> --force` — it cascades all entries, scores, and bracket
 rows. There is no in-place config edit by design.
 
-### 5. Publish results 🚧
+### 5. Publish results ✅
 
 The web UI reads contest state live, but `scored` and `complete` are **embargoed** until results
 are explicitly published — the public site shows a "results locked until the reveal" screen so
