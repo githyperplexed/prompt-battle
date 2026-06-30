@@ -19,7 +19,7 @@ export const LEADERBOARD_PAGE_SIZE = 12;
 const ROUND_LABELS = [
 	"Round of 64",
 	"Round of 32",
-	"Sweet 16",
+	"Round of 16",
 	"Quarterfinals",
 	"Semifinals",
 	"Final"
@@ -310,11 +310,13 @@ export const loadMatchupDetail = async (
 	const ents = await db.query.entry.findMany({
 		where: (e, { and, eq, inArray }) =>
 			and(eq(e.contestId, contestId), inArray(e.id, [m.entryAId, m.entryBId])),
-		columns: { id: true, seed: true, authorDisplayName: true }
+		columns: { id: true, seed: true, authorDisplayName: true, text: true }
 	});
-	const byId = new Map(ents.map((e) => [e.id, { seed: e.seed, name: e.authorDisplayName }]));
-	const a = byId.get(m.entryAId) ?? { seed: null, name: "—" };
-	const b = byId.get(m.entryBId) ?? { seed: null, name: "—" };
+	const byId = new Map(
+		ents.map((e) => [e.id, { seed: e.seed, name: e.authorDisplayName, text: e.text }])
+	);
+	const a = byId.get(m.entryAId) ?? { seed: null, name: "—", text: "" };
+	const b = byId.get(m.entryBId) ?? { seed: null, name: "—", text: "" };
 	const nameOf = (id: string) => (id === m.entryAId ? a.name : b.name);
 
 	const comps = await db.query.comparison.findMany({
@@ -359,8 +361,10 @@ export const loadMatchupDetail = async (
 		roundLabel: ROUND_LABELS[m.round - 1] ?? `Round ${m.round}`,
 		aName: a.name,
 		aSeed: a.seed,
+		aText: a.text,
 		bName: b.name,
 		bSeed: b.seed,
+		bText: b.text,
 		votes,
 		winnerName,
 		resolution

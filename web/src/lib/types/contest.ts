@@ -131,8 +131,10 @@ export type MatchupDetail = {
 	roundLabel: string;
 	aName: string;
 	aSeed: number | null;
+	aText: string;
 	bName: string;
 	bSeed: number | null;
+	bText: string;
 	votes: MatchupVote[];
 	winnerName: string;
 	resolution: string;

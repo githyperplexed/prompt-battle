@@ -6,7 +6,7 @@
 
 	let { rounds, contestId }: { rounds: BracketRound[]; contestId: string } = $props();
 
-	const navLabels = ["R64", "R32", "S16", "QF", "SF", "F"];
+	const navLabels = ["R64", "R32", "R16", "QF", "SF", "F"];
 
 	let selectedId = $state<string | null>(null);
 	let mobileRound = $state<number | null>(null);
