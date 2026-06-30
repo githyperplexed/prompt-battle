@@ -15,14 +15,14 @@
 	style={`background: conic-gradient(var(--color-acc) ${degrees}deg, var(--color-line) 0)`}
 >
 	<div class="flex size-[158px] flex-col items-center justify-center rounded-full bg-card">
-		<div class="font-mono text-[46px] font-bold tracking-[-0.02em] tabular-nums text-acc">
+		<div class="font-mono text-5xl font-bold tracking-tight tabular-nums text-acc">
 			{pct.toFixed(0)}%
 		</div>
-		<div class="text-xs tracking-[0.12em] text-dim uppercase">judged</div>
+		<div class="text-xs tracking-widest text-dim uppercase">judged</div>
 	</div>
 </div>
 
-<div class="font-mono text-[13px] text-mut">
+<div class="font-mono text-sm text-mut">
 	{done.toLocaleString()} / {total.toLocaleString()} scores · {eligible.toLocaleString()} entries × {judges}
 	judges
 </div>

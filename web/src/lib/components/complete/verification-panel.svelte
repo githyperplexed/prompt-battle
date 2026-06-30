@@ -16,19 +16,19 @@
 	<div
 		class="mb-1.5 flex items-center justify-between gap-3.5 rounded-control border border-line bg-bg2 px-3 py-2.5"
 	>
-		<span class={`text-[13px] font-medium ${keyClass}`}>{key}</span>
+		<span class={`text-sm font-medium ${keyClass}`}>{key}</span>
 		<span class="font-mono text-xs break-all text-tx">{value}</span>
 	</div>
 {/snippet}
 
 <Card>
-	<h3 class="m-0 mb-3 text-[17px] font-semibold">Verification record</h3>
-	<p class="m-0 mb-2.5 text-[15px] leading-relaxed text-mut">
+	<h3 class="m-0 mb-3 text-lg font-semibold">Verification record</h3>
+	<p class="m-0 mb-2.5 text-base leading-relaxed text-mut">
 		Everything needed to independently reproduce and audit this result.
 	</p>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-[11px] tracking-[0.12em] text-dim uppercase">
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
 			Panel — 3 models
 		</div>
 		{#each verification.panel as model, i (model)}
@@ -37,14 +37,14 @@
 	</div>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-[11px] tracking-[0.12em] text-dim uppercase">Hashes</div>
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">Hashes</div>
 		{#each hashes as hash (hash.key)}
 			{@render line(hash.key, hash.value)}
 		{/each}
 	</div>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-[11px] tracking-[0.12em] text-dim uppercase">
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
 			Judge request settings
 		</div>
 		{#each verification.judgeSettings as setting (setting.key)}
@@ -53,7 +53,7 @@
 	</div>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-[11px] tracking-[0.12em] text-dim uppercase">
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
 			Bracket fingerprint
 		</div>
 		{@render line("fingerprint", verification.fingerprint ?? "—")}

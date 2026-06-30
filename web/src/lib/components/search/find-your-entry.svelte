@@ -38,7 +38,7 @@
 </script>
 
 <Card>
-	<h3 class="m-0 mb-3 text-[17px] font-semibold">Find your entry</h3>
+	<h3 class="m-0 mb-3 text-lg font-semibold">Find your entry</h3>
 	<input
 		class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-acc"
 		placeholder="Search channel id or author name…"

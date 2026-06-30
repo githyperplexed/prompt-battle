@@ -19,7 +19,7 @@
 	data-mid={matchup.id}
 	onclick={onSelect}
 	class={cn(
-		"flex w-full flex-col gap-1 rounded-control border bg-bg2 p-[7px] text-left hover:border-line2",
+		"flex w-full flex-col gap-1 rounded-control border bg-bg2 p-2 text-left hover:border-line2",
 		selected
 			? "border-acc shadow-[0_0_0_2px_color-mix(in_oklch,var(--color-acc),transparent_78%)]"
 			: "border-line"
@@ -28,12 +28,12 @@
 	{#each teams as team (team.key)}
 		<div
 			class={cn(
-				"flex items-center gap-2 rounded-[5px] px-1 py-[3px] text-xs",
+				"flex items-center gap-2 rounded-sm px-1 py-1 text-xs",
 				team.win ? "bg-white/[0.04] font-semibold text-tx" : "text-dim"
 			)}
 		>
 			<span
-				class={cn("min-w-5 text-right font-mono text-[11px]", team.win ? "text-acc" : "text-dim")}
+				class={cn("min-w-5 text-right font-mono text-xs", team.win ? "text-acc" : "text-dim")}
 			>
 				{team.entrant?.seed ?? "—"}
 			</span>

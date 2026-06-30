@@ -34,13 +34,13 @@
 			{/if}
 		</div>
 
-		<div class="mb-1 text-[16px] font-semibold">
+		<div class="mb-1 text-base font-semibold">
 			{result.author}
 			<span class="font-mono text-xs text-dim">{result.channelId}</span>
 		</div>
 
 		{#if result.kind === "eligible" && showRank && result.rank !== null}
-			<div class="mb-2 font-mono text-[13px] text-acc">
+			<div class="mb-2 font-mono text-sm text-acc">
 				Rank #{result.rank} · {result.seed !== null
 					? `Seed #${result.seed} · advances`
 					: "Below the cut"}
@@ -48,11 +48,11 @@
 		{/if}
 
 		{#if result.kind === "disqualified" && result.redacted}
-			<div class="border-l-2 border-line2 pl-2.5 font-mono text-[13px] text-dim italic">
+			<div class="border-l-2 border-line2 pl-2.5 font-mono text-sm text-dim italic">
 				Comment body redacted — removed under content policy.
 			</div>
 		{:else if result.comment}
-			<p class="m-0 text-[15px] leading-relaxed text-mut [text-wrap:pretty]">{result.comment}</p>
+			<p class="m-0 text-base leading-relaxed text-mut [text-wrap:pretty]">{result.comment}</p>
 		{/if}
 	{/if}
 </div>

@@ -35,7 +35,7 @@
 <div class="border-t border-line first:border-t-0">
 	<button
 		type="button"
-		class="grid w-full grid-cols-[56px_1fr_92px_78px] items-center gap-2.5 px-[18px] py-[13px] text-left transition-colors hover:bg-card2"
+		class="grid w-full grid-cols-[56px_1fr_92px_78px] items-center gap-2.5 px-5 py-3 text-left transition-colors hover:bg-card2"
 		onclick={onToggle}
 	>
 		<div class={`font-semibold tabular-nums ${row.advancing ? "text-tx" : "text-dim"}`}>
@@ -46,17 +46,17 @@
 			<span class="font-mono text-xs text-dim">{row.channelId}</span>
 		</div>
 		<div class="text-right">
-			<span class="font-mono text-[18px] font-bold tabular-nums">{row.score.toFixed(1)}</span>
+			<span class="font-mono text-lg font-bold tabular-nums">{row.score.toFixed(1)}</span>
 		</div>
 		<div class="text-right">
 			{#if row.advancing}
 				<span
-					class="rounded-full border border-[color-mix(in_oklch,var(--color-acc),transparent_60%)] bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2.5 py-[3px] font-mono text-xs font-bold text-acc"
+					class="rounded-full border border-[color-mix(in_oklch,var(--color-acc),transparent_60%)] bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2.5 py-1 font-mono text-xs font-bold text-acc"
 				>
 					#{row.seed}
 				</span>
 			{:else}
-				<span class="rounded-full border border-line px-2 py-[3px] font-mono text-xs text-dim">
+				<span class="rounded-full border border-line px-2 py-1 font-mono text-xs text-dim">
 					out
 				</span>
 			{/if}
@@ -65,10 +65,10 @@
 
 	{#if row.rank === cutRank}
 		<div
-			class="flex items-center justify-center border-y-2 border-dashed border-acc bg-[color-mix(in_oklch,var(--color-acc),transparent_92%)] py-[7px]"
+			class="flex items-center justify-center border-y-2 border-dashed border-acc bg-[color-mix(in_oklch,var(--color-acc),transparent_92%)] py-2"
 		>
 			<span
-				class="rounded-chip bg-bg px-[11px] py-[3px] font-mono text-[11px] font-semibold tracking-[0.1em] text-acc uppercase"
+				class="rounded-chip bg-bg px-3 py-1 font-mono text-xs font-semibold tracking-widest text-acc uppercase"
 			>
 				Top 64 cut line — seeds above advance
 			</span>
@@ -76,9 +76,9 @@
 	{/if}
 
 	{#if expanded}
-		<div class="border-t border-line bg-bg2 p-[18px]">
+		<div class="border-t border-line bg-bg2 p-5">
 			{#if detail}
-				<p class="mb-4 text-[15px] leading-relaxed text-tx [text-wrap:pretty]">{detail.comment}</p>
+				<p class="mb-4 text-base leading-relaxed text-tx [text-wrap:pretty]">{detail.comment}</p>
 				<ScoreMatrix matrix={detail.matrix} score={detail.score} />
 			{:else}
 				<div class="text-sm text-dim">Loading…</div>

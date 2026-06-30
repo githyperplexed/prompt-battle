@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
-/* Deep-indigo competition theme. Gold (`acc`) is the single saturated accent; the
+/* Neutral dark competition theme. Gold (`acc`) is the single saturated accent; the
    purple/magenta pair (`g1`/`g2`) is used only for the ambient page-top glow. */
 @theme {
 	--font-sans: "Lexend", ui-sans-serif, system-ui, sans-serif;
 	--font-mono: "Space Mono", ui-monospace, monospace;
 
-	--color-bg: #14101f;
-	--color-bg2: #1a1430;
-	--color-card: #221a38;
-	--color-card2: #2c2348;
-	--color-line: #352b55;
-	--color-line2: #4a3d72;
-	--color-tx: #f4f1fb;
-	--color-mut: #ada4c9;
-	--color-dim: #7c7299;
+	--color-bg: #0a0a0a;
+	--color-bg2: #171717;
+	--color-card: #1c1c1c;
+	--color-card2: #262626;
+	--color-line: #2e2e2e;
+	--color-line2: #404040;
+	--color-tx: #fafafa;
+	--color-mut: #a3a3a3;
+	--color-dim: #737373;
 	--color-acc: #f7b71d;
 	--color-accd: #9a6e0c;
 	--color-ink: #2a1d02;

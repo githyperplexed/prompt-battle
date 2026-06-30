@@ -28,23 +28,23 @@
 </script>
 
 <Card class="px-8 py-8 text-center">
-	<div class="text-[15px] text-mut">Entries close in</div>
+	<div class="text-base text-mut">Entries close in</div>
 
 	{#if closed}
-		<div class="my-4 text-[34px] font-bold text-acc">Entries closed — snapshot pending</div>
+		<div class="my-4 text-4xl font-bold text-acc">Entries closed — snapshot pending</div>
 	{:else}
 		<div class="my-4 flex items-start justify-center gap-3">
 			{#each cells as cell, i (cell.unit)}
 				{#if i > 0}
-					<div class="text-[46px] leading-[1.1] font-light text-line2">:</div>
+					<div class="text-5xl leading-[1.1] font-light text-line2">:</div>
 				{/if}
-				<div class="min-w-[88px] max-[760px]:min-w-[64px]">
+				<div class="min-w-[88px] max-md:min-w-[64px]">
 					<div
-						class="font-mono text-[66px] leading-none font-bold tracking-[-0.04em] tabular-nums text-acc max-[760px]:text-[42px]"
+						class="font-mono text-6xl leading-none font-bold tracking-tighter tabular-nums text-acc max-md:text-4xl"
 					>
 						{cell.value}
 					</div>
-					<div class="mt-[7px] text-xs tracking-[0.12em] text-dim uppercase">{cell.unit}</div>
+					<div class="mt-2 text-xs tracking-widest text-dim uppercase">{cell.unit}</div>
 				</div>
 			{/each}
 		</div>

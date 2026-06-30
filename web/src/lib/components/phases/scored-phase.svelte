@@ -6,7 +6,7 @@
 	let { contest, leaderboard }: { contest: ContestMeta; leaderboard: LeaderboardData } = $props();
 </script>
 
-<section class="flex flex-col gap-[18px] pt-[26px]">
+<section class="flex flex-col gap-5 pt-7">
 	<FindYourEntry contestId={contest.id} showRank={true} />
 	<Leaderboard data={leaderboard} contestId={contest.id} />
 </section>

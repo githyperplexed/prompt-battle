@@ -11,13 +11,13 @@
 	]);
 </script>
 
-<div class="flex gap-3.5 max-[760px]:flex-col">
+<div class="flex gap-3.5 max-md:flex-col">
 	{#each kpis as kpi (kpi.label)}
 		<div class="flex-1 rounded-card border border-line bg-card p-5">
-			<div class={cn("font-mono text-[42px] font-bold tracking-[-0.03em] tabular-nums", kpi.tone)}>
+			<div class={cn("font-mono text-4xl font-bold tracking-tight tabular-nums", kpi.tone)}>
 				{kpi.value.toLocaleString()}
 			</div>
-			<div class="mt-1 text-[13px] tracking-[0.1em] text-dim uppercase">{kpi.label}</div>
+			<div class="mt-1 text-sm tracking-widest text-dim uppercase">{kpi.label}</div>
 		</div>
 	{/each}
 </div>

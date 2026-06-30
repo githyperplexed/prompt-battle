@@ -7,10 +7,10 @@
 	let { contest }: { contest: ContestMeta } = $props();
 </script>
 
-<section class="flex flex-col gap-[18px] pt-[26px]">
+<section class="flex flex-col gap-5 pt-7">
 	<Countdown snapshotAt={contest.snapshotAt} />
 
-	<div class="grid grid-cols-2 gap-[18px] max-[760px]:grid-cols-1">
+	<div class="grid grid-cols-2 gap-5 max-md:grid-cols-1">
 		<HowToEnter />
 		<HowJudgingWorks panel={contest.panel} />
 	</div>

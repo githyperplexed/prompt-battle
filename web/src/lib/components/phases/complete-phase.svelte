@@ -8,7 +8,7 @@
 	let { contest, complete }: { contest: ContestMeta; complete: CompleteData } = $props();
 </script>
 
-<section class="flex flex-col gap-[18px] pt-[26px]">
+<section class="flex flex-col gap-5 pt-7">
 	{#if complete.champion}
 		<ChampionCard champion={complete.champion} />
 	{/if}

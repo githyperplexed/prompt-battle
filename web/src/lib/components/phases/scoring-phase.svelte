@@ -18,13 +18,13 @@
 	});
 </script>
 
-<section class="flex flex-col gap-[18px] pt-[26px]">
+<section class="flex flex-col gap-5 pt-7">
 	<div class="text-sm text-mut">
 		Each of the three judges is scoring every eligible entry independently. No individual scores or
 		rankings are shown until judging completes.
 	</div>
 
-	<Card class="flex flex-col items-center gap-[18px] py-[34px]">
+	<Card class="flex flex-col items-center gap-5 py-9">
 		<ScoringRadial
 			{pct}
 			done={scoring.done}

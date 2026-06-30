@@ -30,11 +30,11 @@
 </script>
 
 {#if detail}
-	<div class="flex flex-col gap-[18px]">
+	<div class="flex flex-col gap-5">
 		<Card>
 			<div class="mb-3.5 flex flex-wrap items-baseline gap-3">
 				<span class="font-mono text-dim">{detail.roundLabel}</span>
-				<span class="text-[16px] font-semibold">
+				<span class="text-base font-semibold">
 					#{detail.aSeed}
 					{detail.aName} vs #{detail.bSeed}
 					{detail.bName}
@@ -44,16 +44,16 @@
 			<div class="flex flex-col gap-2.5">
 				{#each detail.votes as vote (vote.index)}
 					<div
-						class="grid grid-cols-[200px_1fr_auto] items-center gap-3.5 rounded-control border border-line bg-bg2 px-3.5 py-3 max-[760px]:grid-cols-1"
+						class="grid grid-cols-[200px_1fr_auto] items-center gap-3.5 rounded-control border border-line bg-bg2 px-3.5 py-3 max-md:grid-cols-1"
 					>
 						<div class={`text-sm font-semibold ${judgeText(vote.index)}`}>{vote.label}</div>
-						<div class="flex flex-col gap-0.5 text-[13px] text-mut">
+						<div class="flex flex-col gap-0.5 text-sm text-mut">
 							<div>A-first → <b class="font-semibold text-tx">{vote.aFirst}</b></div>
 							<div>B-first → <b class="font-semibold text-tx">{vote.bFirst}</b></div>
 						</div>
-						<div class="flex flex-col items-end gap-1 max-[760px]:items-start">
+						<div class="flex flex-col items-end gap-1 max-md:items-start">
 							<span
-								class={`rounded-chip px-2 py-0.5 font-mono text-[11px] ${
+								class={`rounded-chip px-2 py-0.5 font-mono text-xs ${
 									vote.consistent
 										? "bg-[color-mix(in_oklch,var(--color-ok),transparent_80%)] text-ok"
 										: "bg-[color-mix(in_oklch,var(--color-acc),transparent_80%)] text-acc"
@@ -61,7 +61,7 @@
 							>
 								{vote.consistent ? "Consistent" : "Inconsistent"}
 							</span>
-							<span class="font-mono text-[11px] text-dim">
+							<span class="font-mono text-xs text-dim">
 								{vote.countsFor ? `Counts → ${vote.countsFor}` : "Not counted"}
 							</span>
 						</div>
@@ -71,7 +71,7 @@
 		</Card>
 
 		<Card>
-			<span class="mb-3 block font-mono text-[11px] tracking-[0.1em] text-dim uppercase"
+			<span class="mb-3 block font-mono text-xs tracking-widest text-dim uppercase"
 				>Entries</span
 			>
 
@@ -86,17 +86,17 @@
 						)}
 					>
 						<div class="mb-2 flex items-baseline gap-2">
-							<span class="font-mono text-[11px] text-dim">#{entry.seed ?? "—"}</span>
+							<span class="font-mono text-xs text-dim">#{entry.seed ?? "—"}</span>
 							<span class="text-sm font-semibold">{entry.name}</span>
 							{#if won}
 								<span
-									class="rounded-chip bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2 py-0.5 font-mono text-[11px] text-acc"
+									class="rounded-chip bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2 py-0.5 font-mono text-xs text-acc"
 								>
 									Winner
 								</span>
 							{/if}
 						</div>
-						<p class="text-[14px] leading-relaxed text-mut [text-wrap:pretty]">{entry.text}</p>
+						<p class="text-sm leading-relaxed text-mut [text-wrap:pretty]">{entry.text}</p>
 					</div>
 				{/each}
 			</div>
@@ -107,7 +107,7 @@
 		>
 			<div class="flex flex-col gap-1">
 				<span class="font-bold text-acc">Winner: {detail.winnerName}</span>
-				<span class="text-[15px] leading-relaxed text-mut">{detail.resolution}</span>
+				<span class="text-base leading-relaxed text-mut">{detail.resolution}</span>
 			</div>
 		</Card>
 	</div>

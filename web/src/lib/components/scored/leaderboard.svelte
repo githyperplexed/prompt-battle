@@ -29,11 +29,11 @@
 		data.mode === "top" && data.page * data.pageSize + data.rows.length < data.totalEligible
 	);
 
-	const tab = "rounded-control border px-3 py-[7px] text-[13px]";
+	const tab = "rounded-control border px-3 py-2 text-sm";
 </script>
 
 <div class="flex flex-wrap items-center justify-between gap-2.5">
-	<h3 class="m-0 text-[17px] font-semibold">
+	<h3 class="m-0 text-lg font-semibold">
 		Leaderboard <span class="text-sm text-dim">· top 64 advance to the bracket</span>
 	</h3>
 	<div class="flex gap-1.5">
@@ -62,7 +62,7 @@
 
 <div class="overflow-hidden rounded-card border border-line bg-card">
 	<div
-		class="grid grid-cols-[56px_1fr_92px_78px] gap-2.5 border-b border-line px-[18px] py-[13px] text-xs tracking-[0.08em] text-dim uppercase"
+		class="grid grid-cols-[56px_1fr_92px_78px] gap-2.5 border-b border-line px-5 py-3 text-xs tracking-widest text-dim uppercase"
 	>
 		<div>#</div>
 		<div>Entry</div>
@@ -80,16 +80,16 @@
 		/>
 	{/each}
 
-	<div class="flex items-center justify-between gap-2.5 border-t border-line px-[18px] py-[13px]">
+	<div class="flex items-center justify-between gap-2.5 border-t border-line px-5 py-3">
 		{#if hasPrev}
 			<a
-				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-[13px] text-mut"
+				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-sm text-mut"
 				href={linkTo({ view: "top", page: String(data.page - 1) })}
 				data-sveltekit-noscroll>‹ Prev</a
 			>
 		{:else}
 			<span
-				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-[13px] text-mut opacity-40"
+				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-sm text-mut opacity-40"
 				>‹ Prev</span
 			>
 		{/if}
@@ -100,13 +100,13 @@
 
 		{#if hasNext}
 			<a
-				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-[13px] text-mut"
+				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-sm text-mut"
 				href={linkTo({ view: "top", page: String(data.page + 1) })}
 				data-sveltekit-noscroll>Next ›</a
 			>
 		{:else}
 			<span
-				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-[13px] text-mut opacity-40"
+				class="rounded-control border border-line bg-card2 px-3 py-1.5 text-sm text-mut opacity-40"
 				>Next ›</span
 			>
 		{/if}

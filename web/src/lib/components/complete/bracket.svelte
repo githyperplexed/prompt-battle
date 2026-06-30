@@ -77,17 +77,17 @@
 	});
 </script>
 
-<h3 class="m-0 text-[17px] font-semibold">
+<h3 class="m-0 text-lg font-semibold">
 	The bracket <span class="text-sm text-dim">· 64 → 1 · 6 rounds · 63 matchups</span>
 </h3>
 
 <!-- Mobile: round selector + a single round's matchups as a list. -->
-<div class="hidden flex-wrap gap-1.5 max-[760px]:flex">
+<div class="hidden flex-wrap gap-1.5 max-md:flex">
 	{#each rounds as round (round.round)}
 		<button
 			type="button"
 			class={cn(
-				"rounded-control border px-[11px] py-1.5 font-mono text-xs",
+				"rounded-control border px-3 py-1.5 font-mono text-xs",
 				activeRound === round.round
 					? "border-acc bg-acc font-semibold text-ink"
 					: "border-line bg-card text-mut"
@@ -99,8 +99,8 @@
 	{/each}
 </div>
 
-<div class="hidden flex-col gap-2.5 rounded-card border border-line bg-card p-4 max-[760px]:flex">
-	<div class="text-center font-mono text-[11px] tracking-[0.1em] text-dim uppercase">
+<div class="hidden flex-col gap-2.5 rounded-card border border-line bg-card p-4 max-md:flex">
+	<div class="text-center font-mono text-xs tracking-widest text-dim uppercase">
 		{rounds.find((r) => r.round === activeRound)?.label}
 	</div>
 	{#each mobileMatchups as matchup (matchup.id)}
@@ -113,8 +113,8 @@
 </div>
 
 <!-- Desktop: horizontally-scrollable column tree with SVG elbow connectors. -->
-<div class="overflow-x-auto rounded-card border border-line bg-card max-[760px]:hidden">
-	<div bind:this={treeEl} class="relative flex min-w-max gap-[18px] p-[18px]">
+<div class="overflow-x-auto rounded-card border border-line bg-card max-md:hidden">
+	<div bind:this={treeEl} class="relative flex min-w-max gap-5 p-5">
 		<svg
 			class="pointer-events-none absolute inset-0 z-0 overflow-visible"
 			width={svgW}
@@ -125,8 +125,8 @@
 		</svg>
 
 		{#each rounds as round (round.round)}
-			<div class="relative z-[1] flex min-w-[172px] flex-col justify-around gap-3">
-				<div class="mb-1 text-center font-mono text-[11px] tracking-[0.1em] text-dim uppercase">
+			<div class="relative z-1 flex min-w-[172px] flex-col justify-around gap-3">
+				<div class="mb-1 text-center font-mono text-xs tracking-widest text-dim uppercase">
 					{round.label}
 				</div>
 				{#each round.matchups as matchup (matchup.id)}

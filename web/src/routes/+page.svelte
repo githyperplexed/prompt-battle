@@ -47,7 +47,7 @@
 		{:else if data.state === "locked"}
 			<LockedPhase />
 		{:else}
-			<section class="pt-[26px]">
+			<section class="pt-7">
 				<Card class="py-9 text-center text-mut">This phase’s view lands in the next pass.</Card>
 			</section>
 		{/if}

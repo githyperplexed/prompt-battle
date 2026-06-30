@@ -20,7 +20,7 @@
 	const phaseLink = (i: number) => phaseQuery(page.url.searchParams, PHASES[i]!);
 </script>
 
-<ol class="flex rounded-b-card border border-t-0 border-line bg-card px-[18px] py-4">
+<ol class="flex rounded-b-card border border-t-0 border-line bg-card px-5 py-4">
 	{#each STEP_LABELS as label, i (label)}
 		{@const state = i < currentIndex ? "done" : i === currentIndex ? "current" : "upcoming"}
 
@@ -37,7 +37,7 @@
 			>
 				<span
 					class={cn(
-						"z-[1] flex size-7 items-center justify-center rounded-full border-2 font-mono text-[13px] font-semibold",
+						"z-1 flex size-7 items-center justify-center rounded-full border-2 font-mono text-sm font-semibold",
 						state === "done" && "border-mut bg-mut text-bg",
 						state === "current" &&
 							"border-acc bg-acc text-ink shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-acc),transparent_80%)]",
@@ -49,7 +49,7 @@
 
 				<span
 					class={cn(
-						"text-xs max-[760px]:hidden",
+						"text-xs max-md:hidden",
 						state === "done" && "text-mut",
 						state === "current" && "font-semibold text-tx",
 						state === "upcoming" && "text-dim"

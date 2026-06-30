@@ -8,7 +8,7 @@
 </script>
 
 <div class="overflow-x-auto">
-	<table class="w-full min-w-[420px] border-collapse text-[13px]">
+	<table class="w-full min-w-[420px] border-collapse text-sm">
 		<thead>
 			<tr>
 				<th class="px-2 py-1.5 text-left text-xs font-medium text-dim">Judge</th>

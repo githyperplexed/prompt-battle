@@ -11,10 +11,10 @@
 </script>
 
 <Card>
-	<h3 class="m-0 mb-3 text-[17px] font-semibold">How to enter</h3>
-	<ul class="m-0 flex list-none flex-col gap-[11px] p-0">
+	<h3 class="m-0 mb-3 text-lg font-semibold">How to enter</h3>
+	<ul class="m-0 flex list-none flex-col gap-3 p-0">
 		{#each steps as step, i (step)}
-			<li class="flex items-center gap-3 text-[15px]">
+			<li class="flex items-center gap-3 text-base">
 				<span
 					class="flex size-6 flex-none items-center justify-center rounded-control border border-line bg-card2 font-mono text-xs text-mut"
 				>
