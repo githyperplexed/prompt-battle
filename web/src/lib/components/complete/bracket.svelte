@@ -2,9 +2,14 @@
 	import BracketNode from "$lib/components/complete/bracket-node.svelte";
 	import MatchupDetail from "$lib/components/complete/matchup-detail.svelte";
 	import { cn } from "$lib/utilities/cn";
-	import type { BracketMatchup, BracketRound } from "$lib/types/contest";
+	import type {
+		BracketMatchup,
+		BracketRound,
+		MatchupDetail as MatchupDetailData
+	} from "$lib/types/contest";
 
-	let { rounds, contestId }: { rounds: BracketRound[]; contestId: string } = $props();
+	let { rounds, details }: { rounds: BracketRound[]; details: Record<string, MatchupDetailData> } =
+		$props();
 
 	const navLabels = ["R64", "R32", "R16", "QF", "SF", "F"];
 
@@ -12,6 +17,7 @@
 	let mobileRound = $state<number | null>(null);
 
 	const activeId = $derived(selectedId ?? rounds.at(-1)?.matchups[0]?.id ?? null);
+	const activeDetail = $derived(activeId ? (details[activeId] ?? null) : null);
 	const activeRound = $derived(mobileRound ?? rounds.at(-1)?.round ?? 1);
 	const mobileMatchups = $derived(rounds.find((r) => r.round === activeRound)?.matchups ?? []);
 
@@ -188,7 +194,7 @@
 </script>
 
 <h3 class="m-0 text-lg font-semibold">
-	The bracket <span class="text-sm text-dim">· 64 → 1 · 6 rounds · 63 matchups</span>
+	The bracket <span class="text-sm text-dim">· Top 64</span>
 </h3>
 
 <!-- Mobile: round selector + a single round's matchups as a list. -->
@@ -235,24 +241,31 @@
 	onpointercancel={onPointerUp}
 	onclickcapture={onClickCapture}
 	role="group"
-	aria-label="Tournament bracket — drag to pan"
+	aria-label="Tournament bracket, drag to pan"
 >
-	<div bind:this={treeEl} class="relative flex min-w-max gap-5 p-5">
-		<svg
-			class="pointer-events-none absolute inset-0 z-0 overflow-visible"
-			width={svgW}
-			height={svgH}
-			viewBox={`0 0 ${svgW} ${svgH}`}
-		>
-			<path d={pathD} fill="none" stroke="var(--color-line2)" stroke-width="1.5" />
-		</svg>
-
-		{#each columns as column (column.key)}
-			<div class="relative z-1 flex min-w-43 flex-col">
-				<div class="mb-1 text-center font-mono text-xs tracking-widest text-dim uppercase">
+	<div class="min-w-max">
+		<!-- Round labels: pinned to the top of the viewport (sticky) but scrolling horizontally with
+		     the columns, so each label always sits above its round wherever the bracket is panned. -->
+		<div class="sticky top-0 z-10 flex gap-5 border-b border-line bg-card px-5 pt-5 pb-2">
+			{#each columns as column (column.key)}
+				<div class="w-43 text-center font-mono text-xs tracking-widest text-dim uppercase">
 					{column.label}
 				</div>
-				<div class="flex flex-col justify-around" style={`height:${areaH}px`}>
+			{/each}
+		</div>
+
+		<div bind:this={treeEl} class="relative flex gap-5 px-5 pt-3 pb-5">
+			<svg
+				class="pointer-events-none absolute inset-0 z-0 overflow-visible"
+				width={svgW}
+				height={svgH}
+				viewBox={`0 0 ${svgW} ${svgH}`}
+			>
+				<path d={pathD} fill="none" stroke="var(--color-line2)" stroke-width="1.5" />
+			</svg>
+
+			{#each columns as column (column.key)}
+				<div class="relative z-1 flex w-43 flex-col justify-around" style={`height:${areaH}px`}>
 					{#each column.matchups as matchup (matchup.id)}
 						<BracketNode
 							{matchup}
@@ -261,12 +274,12 @@
 						/>
 					{/each}
 				</div>
-			</div>
-		{/each}
+			{/each}
+		</div>
 	</div>
 </div>
 
-<MatchupDetail {contestId} matchupId={activeId} />
+<MatchupDetail detail={activeDetail} />
 
 <style>
 	.bracket-viewport {

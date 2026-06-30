@@ -33,9 +33,9 @@
 			<span
 				class={cn("min-w-5 text-right font-mono text-xs", team.win ? "text-acc" : "text-dim")}
 			>
-				{team.entrant?.seed ?? "—"}
+				{team.entrant?.seed ?? "–"}
 			</span>
-			<span class="overflow-hidden text-ellipsis whitespace-nowrap">
+			<span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
 				{team.entrant?.name ?? "bye"}
 			</span>
 		</div>

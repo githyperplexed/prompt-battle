@@ -20,15 +20,14 @@
 	</div>
 
 	<div class="relative z-1 mt-3 font-mono text-xs tracking-widest text-mut">
-		ABSOLUTE SCORE · SEED #{champion.seed}
+		JUDGE SCORE · SEED #{champion.seed}
 	</div>
 
 	<div class="relative z-1 my-4 text-2xl font-bold">
 		{champion.author}
-		<span class="font-mono text-sm text-dim">{champion.channelId}</span>
 	</div>
 
-	<p class="relative z-1 mx-auto max-w-2xl text-left text-base leading-relaxed text-tx text-pretty">
+	<p class="relative z-1 text-left text-base leading-relaxed text-tx text-pretty">
 		{champion.comment}
 	</p>
 </div>

@@ -1,7 +1,6 @@
 <script lang="ts">
-	import Card from "$lib/components/ui/card.svelte";
+	import JudgeChip from "$lib/components/ui/judge-chip.svelte";
 	import type { VerificationData } from "$lib/types/contest";
-	import { judgeLabel, judgeText } from "$lib/utilities/judges";
 
 	let { verification }: { verification: VerificationData } = $props();
 
@@ -21,19 +20,21 @@
 	</div>
 {/snippet}
 
-<Card>
-	<h3 class="m-0 mb-3 text-lg font-semibold">Verification record</h3>
-	<p class="m-0 mb-2.5 text-base leading-relaxed text-mut">
+<div>
+	<h3 class="m-0 mb-1 text-lg font-semibold">Verification record</h3>
+	<p class="m-0 mb-2.5 text-sm leading-relaxed text-mut">
 		Everything needed to independently reproduce and audit this result.
 	</p>
 
 	<div class="mt-4">
 		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
-			Panel — 3 models
+			Panel · 3 models
 		</div>
-		{#each verification.panel as model, i (model)}
-			{@render line(judgeLabel(i), model, judgeText(i))}
-		{/each}
+		<div class="flex flex-wrap gap-2">
+			{#each verification.panel as model, i (model)}
+				<JudgeChip index={i} {model} />
+			{/each}
+		</div>
 	</div>
 
 	<div class="mt-4">
@@ -56,6 +57,6 @@
 		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
 			Bracket fingerprint
 		</div>
-		{@render line("fingerprint", verification.fingerprint ?? "—")}
+		{@render line("fingerprint", verification.fingerprint ?? "–")}
 	</div>
-</Card>
+</div>
