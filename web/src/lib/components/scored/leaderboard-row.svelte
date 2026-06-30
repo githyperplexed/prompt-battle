@@ -1,65 +1,46 @@
 <script lang="ts">
-	import ScoreMatrix from "$lib/components/scored/score-matrix.svelte";
-	import type { EntryDetail, LeaderboardRow } from "$lib/types/contest";
+	import LocalTime from "$lib/components/ui/local-time.svelte";
+	import type { LeaderboardRow } from "$lib/types/contest";
 
 	let {
 		row,
-		contestId,
 		expanded,
 		cutRank,
 		onToggle
 	}: {
 		row: LeaderboardRow;
-		contestId: string;
 		expanded: boolean;
 		cutRank: number;
 		onToggle: () => void;
 	} = $props();
 
-	let detail = $state<EntryDetail | null>(null);
-
-	// Lazy-load the comment + score matrix the first time the row is expanded.
-	$effect(() => {
-		if (!expanded || detail) return;
-
-		const params = new URLSearchParams({ contest: contestId, entry: row.id });
-
-		fetch(`/api/entry-detail?${params}`)
-			.then((res) => (res.ok ? res.json() : null))
-			.then((data) => {
-				detail = data;
-			});
-	});
+	const PREVIEW = 100;
+	const long = $derived(row.text.length > PREVIEW);
 </script>
 
-<div class="border-t border-line first:border-t-0">
+<div class="lb-entry border-t border-line first:border-t-0">
 	<button
 		type="button"
-		class="lb-cols w-full items-center gap-2.5 px-5 py-3 text-left transition-colors hover:bg-card2"
-		onclick={onToggle}
+		class="w-full text-left transition-colors hover:bg-card2"
+		onclick={() => long && onToggle()}
 	>
-		<div class={`font-semibold tabular-nums ${row.advancing ? "text-tx" : "text-dim"}`}>
-			{row.rank}
-		</div>
-		<div>
-			<span class="block font-medium">{row.author}</span>
-			<span class="font-mono text-xs text-dim">{row.channelId}</span>
-		</div>
-		<div class="text-right">
-			<span class="font-mono text-lg font-bold tabular-nums">{row.score.toFixed(1)}</span>
-		</div>
-		<div class="text-right">
-			{#if row.advancing}
-				<span
-					class="rounded-full border border-acc/40 bg-acc/20 px-2.5 py-1 font-mono text-xs font-bold text-acc"
-				>
-					#{row.seed}
-				</span>
-			{:else}
-				<span class="rounded-full border border-line px-2 py-1 font-mono text-xs text-dim">
-					out
-				</span>
-			{/if}
+		<div class="lb-cols items-start gap-2.5 px-5 py-3">
+			<div class={`font-semibold tabular-nums ${row.advancing ? "text-tx" : "text-dim"}`}>
+				{row.rank}
+			</div>
+			<div class="min-w-0">
+				<span class="block font-medium">{row.author}</span>
+				<span class="font-mono text-xs text-dim"><LocalTime iso={row.submittedAt} /></span>
+				<p class="mt-1.5 text-sm leading-relaxed text-mut text-pretty">
+					{expanded || !long ? row.text : `${row.text.slice(0, PREVIEW)}…`}
+				</p>
+				{#if long}
+					<span class="font-mono text-xs text-acc">{expanded ? "Show less" : "Show more"}</span>
+				{/if}
+			</div>
+			<div class="text-right">
+				<span class="font-mono text-lg font-bold tabular-nums">{row.score.toFixed(1)}</span>
+			</div>
 		</div>
 	</button>
 
@@ -70,19 +51,8 @@
 			<span
 				class="rounded-chip bg-bg px-3 py-1 font-mono text-xs font-semibold tracking-widest text-acc uppercase"
 			>
-				Top 64 cut line — seeds above advance
+				Top 64 cut line · seeds above advance
 			</span>
-		</div>
-	{/if}
-
-	{#if expanded}
-		<div class="border-t border-line bg-bg2 p-5">
-			{#if detail}
-				<p class="mb-4 text-base leading-relaxed text-tx text-pretty">{detail.comment}</p>
-				<ScoreMatrix matrix={detail.matrix} score={detail.score} />
-			{:else}
-				<div class="text-sm text-dim">Loading…</div>
-			{/if}
 		</div>
 	{/if}
 </div>
@@ -90,6 +60,12 @@
 <style>
 	.lb-cols {
 		display: grid;
-		grid-template-columns: 56px 1fr 92px 78px;
+		grid-template-columns: 56px 1fr 92px;
+	}
+
+	/* Skip layout/paint for off-screen rows so a multi-thousand-row list stays smooth. */
+	.lb-entry {
+		content-visibility: auto;
+		contain-intrinsic-size: auto 96px;
 	}
 </style>
