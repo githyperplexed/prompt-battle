@@ -3,19 +3,21 @@
 	import { page } from "$app/state";
 
 	import { cn } from "$lib/utilities/cn";
-	import { PHASES, STEP_LABELS, stepIndexFor, type RenderState } from "$lib/utilities/phases";
+	import {
+		PHASES,
+		phaseQuery,
+		STEP_LABELS,
+		stepIndexFor,
+		type RenderState
+	} from "$lib/utilities/phases";
 
 	let { current }: { current: RenderState } = $props();
 
 	const currentIndex = $derived(stepIndexFor(current));
 
-	// Dev-only: each step links to its phase via the ?phase= override (preserving other params).
-	const phaseLink = (i: number) => {
-		const next = new URLSearchParams(page.url.search);
-		next.set("phase", PHASES[i]!);
-
-		return `?${next}`;
-	};
+	// Dev-only: each step links to its phase via the ?phase= override, dropping params owned by other
+	// phases so stale state never carries across a phase switch.
+	const phaseLink = (i: number) => phaseQuery(page.url.searchParams, PHASES[i]!);
 </script>
 
 <ol class="flex rounded-b-card border border-t-0 border-line bg-card px-[18px] py-4">

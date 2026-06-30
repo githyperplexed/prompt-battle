@@ -32,3 +32,26 @@ export const showsShell = (state: RenderState): boolean =>
 // Maps a raw contest.status onto a render state; an unknown status falls back to `draft`.
 export const phaseForStatus = (status: string): RenderState =>
 	isRenderState(status) ? status : "draft";
+
+// The query params each render state reads. Params absent from the destination phase's list are
+// stale on navigation, so they get dropped rather than leaking from one phase's URL into another.
+const PHASE_PARAMS: Partial<Record<RenderState, readonly string[]>> = {
+	scored: ["view", "page"]
+};
+
+export const paramsForPhase = (state: RenderState): readonly string[] => PHASE_PARAMS[state] ?? [];
+
+// Query string for navigating to `target`, keeping only the dev `phase` override and the params the
+// target phase itself owns. Every other phase's leftover params are discarded.
+export const phaseQuery = (current: URLSearchParams, target: RenderState): string => {
+	const next = new URLSearchParams();
+	next.set("phase", target);
+
+	for (const key of paramsForPhase(target)) {
+		const value = current.get(key);
+
+		if (value !== null) next.set(key, value);
+	}
+
+	return `?${next}`;
+};
