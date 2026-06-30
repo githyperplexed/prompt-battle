@@ -31,7 +31,7 @@
 	<div class="text-base text-mut">Entries close in</div>
 
 	{#if closed}
-		<div class="my-4 text-4xl font-bold text-acc">Entries closed — snapshot pending</div>
+		<div class="my-4 text-4xl font-bold text-acc">Entries closed · snapshot pending</div>
 	{:else}
 		<div class="my-4 flex items-start justify-center gap-3">
 			{#each cells as cell, i (cell.unit)}
