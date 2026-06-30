@@ -6,7 +6,8 @@ import type {
 	MatchupDetail,
 	ScoringData,
 	SearchOutcome,
-	SnapshotData
+	SnapshotData,
+	VerificationData
 } from "$lib/types/contest";
 import { judgeLabel } from "$lib/utilities/judges";
 import { dqLabel } from "$lib/utilities/labels";
@@ -35,8 +36,41 @@ type ContestConfigShape = {
 const panelIdsOf = (config: unknown): string[] =>
 	(config as ContestConfigShape | null)?.panel?.map((model) => model.id) ?? [];
 
+const buildVerification = (
+	config: ContestConfigShape | null,
+	fingerprint: string | null
+): VerificationData => {
+	const settings = config?.judge?.requestSettings;
+
+	return {
+		panel: config?.panel?.map((model) => model.id) ?? [],
+		scorePromptHash: config?.prompts?.score?.hash ?? "—",
+		comparePromptHash: config?.prompts?.compare?.hash ?? "—",
+		keywordHash: config?.keywordHash ?? "—",
+		fingerprint,
+		judgeSettings: [
+			{ key: "max retries", value: String(settings?.maxRetries ?? "—") },
+			{ key: "sampling", value: settings?.sampling ?? "—" },
+			{ key: "orderings", value: "2 (A-first, B-first)" }
+		]
+	};
+};
+
 export const loadActiveContest = () =>
 	db.query.contest.findFirst({ orderBy: (c, { desc }) => desc(c.createdAt) });
+
+// Phase-agnostic: the committed config hashes exist from contest creation, so the /rules page can
+// show them at any lifecycle stage (the fingerprint only fills in once the bracket has seeded).
+export const loadActiveVerification = async (): Promise<VerificationData | null> => {
+	const contest = await loadActiveContest();
+
+	if (!contest) return null;
+
+	return buildVerification(
+		(contest.config ?? null) as ContestConfigShape | null,
+		contest.bracketFingerprint
+	);
+};
 
 export const loadSnapshotStats = async (contestId: string): Promise<SnapshotData> => {
 	const rows = await db
@@ -273,19 +307,7 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 			}))
 	})).filter((r) => r.matchups.length > 0);
 
-	const settings = config?.judge?.requestSettings;
-	const verification = {
-		panel: config?.panel?.map((model) => model.id) ?? [],
-		scorePromptHash: config?.prompts?.score?.hash ?? "—",
-		comparePromptHash: config?.prompts?.compare?.hash ?? "—",
-		keywordHash: config?.keywordHash ?? "—",
-		fingerprint: contest?.bracketFingerprint ?? null,
-		judgeSettings: [
-			{ key: "max retries", value: String(settings?.maxRetries ?? "—") },
-			{ key: "sampling", value: settings?.sampling ?? "—" },
-			{ key: "orderings", value: "2 (A-first, B-first)" }
-		]
-	};
+	const verification = buildVerification(config, contest?.bracketFingerprint ?? null);
 
 	return { champion, rounds, verification };
 };
