@@ -1,5 +1,21 @@
 <script lang="ts">
 	let { fingerprint }: { fingerprint: string | null } = $props();
+
+	let copied = $state(false);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+
+	const copy = async () => {
+		if (!fingerprint) return;
+
+		try {
+			await navigator.clipboard.writeText(fingerprint);
+			copied = true;
+			clearTimeout(timer);
+			timer = setTimeout(() => (copied = false), 1500);
+		} catch {
+			// clipboard unavailable; ignore
+		}
+	};
 </script>
 
 <div
@@ -11,6 +27,15 @@
 	</div>
 
 	{#if fingerprint}
-		<div class="font-mono text-xs text-dim">contest · {fingerprint}</div>
+		<button
+			type="button"
+			class="flex min-w-0 max-w-full items-center gap-1.5 font-mono text-xs text-dim hover:text-mut"
+			onclick={copy}
+			title="Copy bracket fingerprint"
+		>
+			<span class="flex-none">fingerprint ·</span>
+			<span class="min-w-0 truncate">{fingerprint}</span>
+			<span class="flex-none text-ok">{copied ? "copied" : ""}</span>
+		</button>
 	{/if}
 </div>

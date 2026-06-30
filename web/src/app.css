@@ -39,6 +39,11 @@
 	color-scheme: dark;
 }
 
+/* Always reserve the scrollbar gutter so content never shifts when a page gains/loses its scrollbar. */
+html {
+	scrollbar-gutter: stable;
+}
+
 html,
 body {
 	min-height: 100%;
