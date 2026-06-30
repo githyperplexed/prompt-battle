@@ -23,7 +23,7 @@
 	<h1 class="mt-5 mb-2 text-3xl font-bold">Rules &amp; verification</h1>
 	<p class="m-0 mb-6 max-w-2xl text-base leading-relaxed text-mut">
 		This contest runs on an open-source engine. The rules, the judging code, and every recorded
-		decision are public — and the judging inputs are committed as hashes before any entry is judged,
+		decision are public. The judging inputs are committed as hashes before any entry is judged,
 		so anyone can confirm the contest used the published rules and the exact frozen inputs.
 	</p>
 

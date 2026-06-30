@@ -27,25 +27,25 @@ export type ScoringData = {
 	perModel: { id: string; done: number }[];
 };
 
-export type SearchOutcome =
-	| {
-			kind: "eligible";
-			author: string;
-			channelId: string;
-			comment: string;
-			rank: number | null;
-			seed: number | null;
-	  }
-	| {
-			kind: "disqualified";
-			author: string;
-			channelId: string;
-			reason: string;
-			reasonLabel: string;
-			redacted: boolean;
-			comment: string | null;
-	  }
-	| { kind: "none"; query: string };
+export type EntryListItem = {
+	id: string;
+	author: string;
+	channelId: string;
+	submittedAt: string;
+	text: string;
+	// null when eligible; otherwise the disqualification reason key (mapped to a label in the UI).
+	dqReason: string | null;
+	// true for content-policy (tos) removals — the body is withheld from this payload entirely.
+	redacted: boolean;
+};
+
+// Score-free entry list for the snapshot and scoring phases: ordered by submission, never carries
+// (or even queries) scores, rank, or seed.
+export type EntryListData = {
+	entries: EntryListItem[];
+	total: number;
+	capped: boolean;
+};
 
 export type LeaderboardRow = {
 	id: string;
@@ -53,33 +53,17 @@ export type LeaderboardRow = {
 	seed: number | null;
 	author: string;
 	channelId: string;
+	submittedAt: string;
+	text: string;
 	score: number;
 	advancing: boolean;
 };
 
 export type LeaderboardData = {
 	rows: LeaderboardRow[];
-	mode: "top" | "cut";
-	page: number;
-	pageSize: number;
 	totalEligible: number;
 	cutRank: number;
-};
-
-export type MatrixRow = {
-	index: number;
-	label: string;
-	persuasiveness: number;
-	originality: number;
-	cleverness: number;
-	execution: number;
-	total: number;
-};
-
-export type EntryDetail = {
-	comment: string;
-	matrix: MatrixRow[];
-	score: number;
+	capped: boolean;
 };
 
 export type BracketEntrant = { seed: number | null; name: string } | null;
@@ -115,7 +99,7 @@ export type VerificationData = {
 export type CompleteData = {
 	champion: Champion;
 	rounds: BracketRound[];
-	verification: VerificationData;
+	details: Record<string, MatchupDetail>;
 };
 
 export type MatchupVote = {
@@ -145,6 +129,7 @@ export type ContestPageData = {
 	contest: ContestMeta | null;
 	snapshot?: SnapshotData;
 	scoring?: ScoringData;
+	entries?: EntryListData;
 	leaderboard?: LeaderboardData;
 	complete?: CompleteData;
 };

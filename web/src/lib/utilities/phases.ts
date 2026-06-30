@@ -35,9 +35,7 @@ export const phaseForStatus = (status: string): RenderState =>
 
 // The query params each render state reads. Params absent from the destination phase's list are
 // stale on navigation, so they get dropped rather than leaking from one phase's URL into another.
-const PHASE_PARAMS: Partial<Record<RenderState, readonly string[]>> = {
-	scored: ["view", "page"]
-};
+const PHASE_PARAMS: Partial<Record<RenderState, readonly string[]>> = {};
 
 export const paramsForPhase = (state: RenderState): readonly string[] => PHASE_PARAMS[state] ?? [];
 

@@ -36,14 +36,14 @@
 	>
 		{#if data.state === "open"}
 			<OpenPhase contest={data.contest} />
-		{:else if data.state === "snapshotted" && data.snapshot}
-			<SnapshotPhase contest={data.contest} snapshot={data.snapshot} />
-		{:else if data.state === "scoring" && data.scoring}
-			<ScoringPhase scoring={data.scoring} />
+		{:else if data.state === "snapshotted" && data.snapshot && data.entries}
+			<SnapshotPhase contest={data.contest} snapshot={data.snapshot} entries={data.entries} />
+		{:else if data.state === "scoring" && data.scoring && data.entries}
+			<ScoringPhase scoring={data.scoring} entries={data.entries} />
 		{:else if data.state === "scored" && data.leaderboard}
-			<ScoredPhase contest={data.contest} leaderboard={data.leaderboard} />
+			<ScoredPhase leaderboard={data.leaderboard} />
 		{:else if data.state === "complete" && data.complete}
-			<CompletePhase contest={data.contest} complete={data.complete} />
+			<CompletePhase complete={data.complete} />
 		{:else if data.state === "locked"}
 			<LockedPhase />
 		{:else}

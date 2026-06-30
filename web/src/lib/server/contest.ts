@@ -1,21 +1,22 @@
 import { and, comparison, count, db, entry, eq, matchup, score } from "$lib/server/database";
 import type {
 	CompleteData,
-	EntryDetail,
+	EntryListData,
 	LeaderboardData,
 	MatchupDetail,
 	ScoringData,
-	SearchOutcome,
 	SnapshotData,
 	VerificationData
 } from "$lib/types/contest";
 import { judgeLabel } from "$lib/utilities/judges";
-import { dqLabel } from "$lib/utilities/labels";
 import { aggregateTotals, rankByScore } from "$lib/utilities/ranking";
 
 // Engine constants, mirrored from worker/src/constants.ts.
 const BRACKET_SIZE = 64;
-export const LEADERBOARD_PAGE_SIZE = 12;
+
+// Upper bound on rows returned to the client for the full entry/leaderboard lists. Beyond this the UI
+// shows a "first N of M" note; the cap keeps the payload and DOM bounded.
+export const ENTRY_LIST_CAP = 5000;
 
 const ROUND_LABELS = [
 	"Round of 64",
@@ -44,13 +45,13 @@ const buildVerification = (
 
 	return {
 		panel: config?.panel?.map((model) => model.id) ?? [],
-		scorePromptHash: config?.prompts?.score?.hash ?? "—",
-		comparePromptHash: config?.prompts?.compare?.hash ?? "—",
-		keywordHash: config?.keywordHash ?? "—",
+		scorePromptHash: config?.prompts?.score?.hash ?? "–",
+		comparePromptHash: config?.prompts?.compare?.hash ?? "–",
+		keywordHash: config?.keywordHash ?? "–",
 		fingerprint,
 		judgeSettings: [
-			{ key: "max retries", value: String(settings?.maxRetries ?? "—") },
-			{ key: "sampling", value: settings?.sampling ?? "—" },
+			{ key: "max retries", value: String(settings?.maxRetries ?? "–") },
+			{ key: "sampling", value: settings?.sampling ?? "–" },
 			{ key: "orderings", value: "2 (A-first, B-first)" }
 		]
 	};
@@ -123,14 +124,65 @@ export const loadScoringStats = async (
 	return { eligible, total: eligible * modelIds.length, done, perModel };
 };
 
-export const loadLeaderboard = async (
+// The snapshot/scoring entry list. Deliberately selects no score/rank/seed columns and never touches
+// the score table, so scores cannot leak before the reveal. Ordered by submission time. The snapshot
+// view passes `includeDisqualified` to show the full field with reason badges; scoring stays
+// eligible-only. Content-policy (tos) bodies are blanked here so they never reach the client.
+export const loadEntryList = async (
 	contestId: string,
-	mode: "top" | "cut",
-	page: number
-): Promise<LeaderboardData> => {
+	includeDisqualified: boolean
+): Promise<EntryListData> => {
+	const scope = includeDisqualified
+		? eq(entry.contestId, contestId)
+		: and(eq(entry.contestId, contestId), eq(entry.status, "eligible"));
+
+	const totalRows = await db.select({ n: count() }).from(entry).where(scope);
+	const total = totalRows[0]?.n ?? 0;
+
+	const rows = await db.query.entry.findMany({
+		where: (e, { and, eq }) =>
+			includeDisqualified
+				? eq(e.contestId, contestId)
+				: and(eq(e.contestId, contestId), eq(e.status, "eligible")),
+		orderBy: (e, { asc }) => asc(e.publishedAt),
+		limit: ENTRY_LIST_CAP,
+		columns: {
+			id: true,
+			authorDisplayName: true,
+			channelId: true,
+			publishedAt: true,
+			text: true,
+			status: true,
+			dqReason: true
+		}
+	});
+
+	return {
+		entries: rows.map((e) => {
+			const disqualified = e.status === "disqualified";
+			const redacted = disqualified && e.dqReason === "tos";
+
+			return {
+				id: e.id,
+				author: e.authorDisplayName,
+				channelId: e.channelId,
+				submittedAt: e.publishedAt.toISOString(),
+				text: redacted ? "" : e.text,
+				dqReason: disqualified ? (e.dqReason ?? "deleted") : null,
+				redacted
+			};
+		}),
+		total,
+		capped: total > ENTRY_LIST_CAP
+	};
+};
+
+// Full ranked leaderboard. Only called from the page load's `scored` branch, which the embargo
+// logic already gates to post-reveal (or the dev ?phase= override), so scores never load early.
+export const loadLeaderboard = async (contestId: string): Promise<LeaderboardData> => {
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
-		columns: { id: true, authorDisplayName: true, channelId: true, publishedAt: true }
+		columns: { id: true, authorDisplayName: true, channelId: true, publishedAt: true, text: true }
 	});
 
 	const scoreRows = await db
@@ -146,6 +198,7 @@ export const loadLeaderboard = async (
 		totalsByEntry.set(row.entryId, list);
 	}
 
+	// `publishedAt` doubles as the rank tiebreaker (earlier submission wins) and the displayed time.
 	const rankable = entries.flatMap((e) => {
 		const totals = totalsByEntry.get(e.id);
 
@@ -157,6 +210,7 @@ export const loadLeaderboard = async (
 				author: e.authorDisplayName,
 				channelId: e.channelId,
 				publishedAt: e.publishedAt,
+				text: e.text,
 				...aggregateTotals(totals)
 			}
 		];
@@ -166,88 +220,92 @@ export const loadLeaderboard = async (
 		id: e.id,
 		author: e.author,
 		channelId: e.channelId,
+		submittedAt: e.publishedAt.toISOString(),
+		text: e.text,
 		score: e.absoluteScore,
 		rank: i + 1,
 		seed: i < BRACKET_SIZE ? i + 1 : null,
 		advancing: i < BRACKET_SIZE
 	}));
 
-	const rows =
-		mode === "cut"
-			? ranked.slice(Math.max(0, BRACKET_SIZE - 4), BRACKET_SIZE + 4)
-			: ranked.slice(
-					page * LEADERBOARD_PAGE_SIZE,
-					page * LEADERBOARD_PAGE_SIZE + LEADERBOARD_PAGE_SIZE
-				);
-
 	return {
-		rows,
-		mode,
-		page,
-		pageSize: LEADERBOARD_PAGE_SIZE,
+		rows: ranked.slice(0, ENTRY_LIST_CAP),
 		totalEligible: ranked.length,
-		cutRank: BRACKET_SIZE
+		cutRank: BRACKET_SIZE,
+		capped: ranked.length > ENTRY_LIST_CAP
 	};
 };
 
-export const loadEntryDetail = async (
-	contestId: string,
-	entryId: string
-): Promise<EntryDetail | null> => {
-	const contest = await db.query.contest.findFirst({
-		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { config: true }
-	});
+type MatchupEntry = { seed: number | null; name: string; text: string };
+type MatchupComparison = { modelId: string; orderSwapped: boolean; chosenEntryId: string };
+type MatchupRow = { round: number; entryAId: string; entryBId: string; winnerId: string | null };
 
-	if (!contest) return null;
+// Builds one matchup's detail (votes + resolution + prompt texts) from already-fetched data, so the
+// whole bracket's details can be assembled in `loadComplete` without a query per matchup.
+const buildMatchupDetail = (
+	m: MatchupRow,
+	byId: Map<string, MatchupEntry>,
+	comps: MatchupComparison[],
+	panel: string[]
+): MatchupDetail => {
+	const a = byId.get(m.entryAId) ?? { seed: null, name: "–", text: "" };
+	const b = byId.get(m.entryBId) ?? { seed: null, name: "–", text: "" };
+	const nameOf = (id: string) => (id === m.entryAId ? a.name : b.name);
 
-	const target = await db.query.entry.findFirst({
-		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.id, entryId)),
-		columns: { text: true }
-	});
-
-	if (!target) return null;
-
-	const rows = await db
-		.select({
-			modelId: score.modelId,
-			persuasiveness: score.persuasiveness,
-			originality: score.originality,
-			cleverness: score.cleverness,
-			execution: score.execution,
-			total: score.total
-		})
-		.from(score)
-		.where(and(eq(score.contestId, contestId), eq(score.entryId, entryId)));
-
-	const byModel = new Map(rows.map((row) => [row.modelId, row]));
-	const matrix = panelIdsOf(contest.config).map((id, i) => {
-		const row = byModel.get(id);
+	const votes = panel.map((modelId, i) => {
+		const aFirst = comps.find((c) => c.modelId === modelId && !c.orderSwapped);
+		const bFirst = comps.find((c) => c.modelId === modelId && c.orderSwapped);
+		const consistent = !!aFirst && !!bFirst && aFirst.chosenEntryId === bFirst.chosenEntryId;
 
 		return {
 			index: i,
 			label: judgeLabel(i),
-			persuasiveness: row?.persuasiveness ?? 0,
-			originality: row?.originality ?? 0,
-			cleverness: row?.cleverness ?? 0,
-			execution: row?.execution ?? 0,
-			total: row?.total ?? 0
+			aFirst: aFirst ? nameOf(aFirst.chosenEntryId) : "–",
+			bFirst: bFirst ? nameOf(bFirst.chosenEntryId) : "–",
+			consistent,
+			countsFor: consistent ? nameOf(aFirst!.chosenEntryId) : null
 		};
 	});
 
-	const totals = rows.map((row) => row.total);
-	const mean = totals.length ? totals.reduce((sum, t) => sum + t, 0) / totals.length : 0;
+	let tallyA = 0;
+	let tallyB = 0;
 
-	return { comment: target.text, matrix, score: Math.round(mean * 10) / 10 };
+	for (const vote of votes) {
+		if (vote.countsFor === a.name) tallyA += 1;
+		else if (vote.countsFor === b.name) tallyB += 1;
+	}
+
+	const uncounted = votes.filter((vote) => !vote.consistent).length;
+	const winnerName = m.winnerId === m.entryAId ? a.name : m.winnerId === m.entryBId ? b.name : "–";
+	const higher = (a.seed ?? Infinity) <= (b.seed ?? Infinity) ? a : b;
+	const tail = uncounted > 0 ? ` ${uncounted} vote(s) uncounted for inconsistency.` : "";
+
+	const resolution =
+		tallyA === tallyB
+			? `Deadlock ${tallyA}–${tallyB}, resolved to the higher seed: #${higher.seed} ${higher.name}.${tail}`
+			: `Majority ${Math.max(tallyA, tallyB)}–${Math.min(tallyA, tallyB)} for ${winnerName}.${tail}`;
+
+	return {
+		roundLabel: ROUND_LABELS[m.round - 1] ?? `Round ${m.round}`,
+		aName: a.name,
+		aSeed: a.seed,
+		aText: a.text,
+		bName: b.name,
+		bSeed: b.seed,
+		bText: b.text,
+		votes,
+		winnerName,
+		resolution
+	};
 };
 
 export const loadComplete = async (contestId: string): Promise<CompleteData> => {
 	const contest = await db.query.contest.findFirst({
 		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { config: true, bracketFingerprint: true, winnerEntryId: true }
+		columns: { config: true, winnerEntryId: true }
 	});
 
-	const config = (contest?.config ?? null) as ContestConfigShape | null;
+	const panel = panelIdsOf(contest?.config);
 
 	let champion: CompleteData["champion"] = null;
 
@@ -281,10 +339,39 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 
 	const seeded = await db.query.entry.findMany({
 		where: (e, { and, eq, isNotNull }) => and(eq(e.contestId, contestId), isNotNull(e.seed)),
-		columns: { id: true, seed: true, authorDisplayName: true }
+		columns: { id: true, seed: true, authorDisplayName: true, text: true }
 	});
 
-	const byId = new Map(seeded.map((e) => [e.id, { seed: e.seed, name: e.authorDisplayName }]));
+	const byId = new Map<string, MatchupEntry>(
+		seeded.map((e) => [e.id, { seed: e.seed, name: e.authorDisplayName, text: e.text }])
+	);
+
+	// All comparisons for the bracket in one query, grouped by matchup, so every matchup's detail can
+	// be built up front (preloaded with the page) rather than fetched on click.
+	const matchupIds = matchups.map((m) => m.id);
+	const comparisons = matchupIds.length
+		? await db.query.comparison.findMany({
+				where: (c, { inArray }) => inArray(c.matchupId, matchupIds),
+				columns: { matchupId: true, modelId: true, orderSwapped: true, chosenEntryId: true }
+			})
+		: [];
+
+	const compsByMatchup = new Map<string, MatchupComparison[]>();
+	for (const c of comparisons) {
+		const list = compsByMatchup.get(c.matchupId) ?? [];
+		list.push(c);
+		compsByMatchup.set(c.matchupId, list);
+	}
+
+	const details: Record<string, MatchupDetail> = {};
+	for (const m of matchups) {
+		details[m.id] = buildMatchupDetail(m, byId, compsByMatchup.get(m.id) ?? [], panel);
+	}
+
+	const nodeOf = (id: string) => {
+		const e = byId.get(id);
+		return e ? { seed: e.seed, name: e.name } : null;
+	};
 
 	const rounds = ROUND_LABELS.map((label, i) => ({
 		round: i + 1,
@@ -296,8 +383,8 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 				id: m.id,
 				round: m.round,
 				slot: m.slot,
-				a: byId.get(m.entryAId) ?? null,
-				b: byId.get(m.entryBId) ?? null,
+				a: nodeOf(m.entryAId),
+				b: nodeOf(m.entryBId),
 				winnerSide:
 					m.winnerId === m.entryAId
 						? ("a" as const)
@@ -307,139 +394,6 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 			}))
 	})).filter((r) => r.matchups.length > 0);
 
-	const verification = buildVerification(config, contest?.bracketFingerprint ?? null);
-
-	return { champion, rounds, verification };
+	return { champion, rounds, details };
 };
 
-export const loadMatchupDetail = async (
-	contestId: string,
-	matchupId: string
-): Promise<MatchupDetail | null> => {
-	const m = await db.query.matchup.findFirst({
-		where: (x, { and, eq }) => and(eq(x.contestId, contestId), eq(x.id, matchupId)),
-		columns: { round: true, entryAId: true, entryBId: true, winnerId: true }
-	});
-
-	if (!m) return null;
-
-	const contest = await db.query.contest.findFirst({
-		where: (c, { eq }) => eq(c.id, contestId),
-		columns: { config: true }
-	});
-	const panel = panelIdsOf(contest?.config);
-
-	const ents = await db.query.entry.findMany({
-		where: (e, { and, eq, inArray }) =>
-			and(eq(e.contestId, contestId), inArray(e.id, [m.entryAId, m.entryBId])),
-		columns: { id: true, seed: true, authorDisplayName: true, text: true }
-	});
-	const byId = new Map(
-		ents.map((e) => [e.id, { seed: e.seed, name: e.authorDisplayName, text: e.text }])
-	);
-	const a = byId.get(m.entryAId) ?? { seed: null, name: "—", text: "" };
-	const b = byId.get(m.entryBId) ?? { seed: null, name: "—", text: "" };
-	const nameOf = (id: string) => (id === m.entryAId ? a.name : b.name);
-
-	const comps = await db.query.comparison.findMany({
-		where: (c, { eq }) => eq(c.matchupId, matchupId),
-		columns: { modelId: true, orderSwapped: true, chosenEntryId: true }
-	});
-
-	const votes = panel.map((modelId, i) => {
-		const aFirst = comps.find((c) => c.modelId === modelId && !c.orderSwapped);
-		const bFirst = comps.find((c) => c.modelId === modelId && c.orderSwapped);
-		const consistent = !!aFirst && !!bFirst && aFirst.chosenEntryId === bFirst.chosenEntryId;
-
-		return {
-			index: i,
-			label: judgeLabel(i),
-			aFirst: aFirst ? nameOf(aFirst.chosenEntryId) : "—",
-			bFirst: bFirst ? nameOf(bFirst.chosenEntryId) : "—",
-			consistent,
-			countsFor: consistent ? nameOf(aFirst!.chosenEntryId) : null
-		};
-	});
-
-	let tallyA = 0;
-	let tallyB = 0;
-
-	for (const vote of votes) {
-		if (vote.countsFor === a.name) tallyA += 1;
-		else if (vote.countsFor === b.name) tallyB += 1;
-	}
-
-	const uncounted = votes.filter((vote) => !vote.consistent).length;
-	const winnerName = m.winnerId === m.entryAId ? a.name : m.winnerId === m.entryBId ? b.name : "—";
-	const higher = (a.seed ?? Infinity) <= (b.seed ?? Infinity) ? a : b;
-	const tail = uncounted > 0 ? ` ${uncounted} vote(s) uncounted for inconsistency.` : "";
-
-	const resolution =
-		tallyA === tallyB
-			? `Deadlock ${tallyA}–${tallyB} — resolved to the higher seed: #${higher.seed} ${higher.name}.${tail}`
-			: `Majority ${Math.max(tallyA, tallyB)}–${Math.min(tallyA, tallyB)} for ${winnerName}.${tail}`;
-
-	return {
-		roundLabel: ROUND_LABELS[m.round - 1] ?? `Round ${m.round}`,
-		aName: a.name,
-		aSeed: a.seed,
-		aText: a.text,
-		bName: b.name,
-		bSeed: b.seed,
-		bText: b.text,
-		votes,
-		winnerName,
-		resolution
-	};
-};
-
-export const searchEntry = async (contestId: string, rawQuery: string): Promise<SearchOutcome> => {
-	const query = rawQuery.trim();
-
-	if (!contestId || !query) return { kind: "none", query };
-
-	const pattern = `%${query}%`;
-	const hit = await db.query.entry.findFirst({
-		where: (e, { and, eq, ilike, or }) =>
-			and(
-				eq(e.contestId, contestId),
-				or(ilike(e.authorDisplayName, pattern), ilike(e.channelId, pattern))
-			),
-		orderBy: (e, { asc }) => asc(e.publishedAt),
-		columns: {
-			authorDisplayName: true,
-			channelId: true,
-			text: true,
-			status: true,
-			dqReason: true,
-			rank: true,
-			seed: true
-		}
-	});
-
-	if (!hit) return { kind: "none", query };
-
-	if (hit.status === "eligible") {
-		return {
-			kind: "eligible",
-			author: hit.authorDisplayName,
-			channelId: hit.channelId,
-			comment: hit.text,
-			rank: hit.rank,
-			seed: hit.seed
-		};
-	}
-
-	const reason = hit.dqReason ?? "deleted";
-	const redacted = reason === "tos";
-
-	return {
-		kind: "disqualified",
-		author: hit.authorDisplayName,
-		channelId: hit.channelId,
-		reason,
-		reasonLabel: dqLabel(reason),
-		redacted,
-		comment: redacted ? null : hit.text
-	};
-};

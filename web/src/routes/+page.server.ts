@@ -3,6 +3,7 @@ import { dev } from "$app/environment";
 import {
 	loadActiveContest,
 	loadComplete,
+	loadEntryList,
 	loadLeaderboard,
 	loadScoringStats,
 	loadSnapshotStats
@@ -49,16 +50,21 @@ export const load: PageServerLoad = async ({ url }): Promise<ContestPageData> =>
 
 	const data: ContestPageData = { state, contest: meta };
 
-	if (state === "snapshotted") data.snapshot = await loadSnapshotStats(contest.id);
-
-	if (state === "scoring") data.scoring = await loadScoringStats(contest.id, panel);
-
-	if (state === "scored") {
-		const view = url.searchParams.get("view") === "cut" ? "cut" : "top";
-		const page = Math.max(0, Math.trunc(Number(url.searchParams.get("page")) || 0));
-
-		data.leaderboard = await loadLeaderboard(contest.id, view, page);
+	if (state === "snapshotted") {
+		[data.snapshot, data.entries] = await Promise.all([
+			loadSnapshotStats(contest.id),
+			loadEntryList(contest.id, true)
+		]);
 	}
+
+	if (state === "scoring") {
+		[data.scoring, data.entries] = await Promise.all([
+			loadScoringStats(contest.id, panel),
+			loadEntryList(contest.id, false)
+		]);
+	}
+
+	if (state === "scored") data.leaderboard = await loadLeaderboard(contest.id);
 
 	if (state === "complete") data.complete = await loadComplete(contest.id);
 
