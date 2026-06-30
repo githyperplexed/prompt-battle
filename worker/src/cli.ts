@@ -13,6 +13,7 @@ const COMMANDS = [
 	"reset",
 	"delete",
 	"publish",
+	"status",
 	"smoke"
 ] as const;
 type Command = (typeof COMMANDS)[number];
@@ -62,6 +63,12 @@ const main = async () => {
 			const { runPublish } = await import("$src/publish");
 
 			await runPublish();
+			break;
+		}
+		case "status": {
+			const { runStatus } = await import("$src/status");
+
+			await runStatus();
 			break;
 		}
 		case "smoke": {

@@ -34,6 +34,11 @@ prompts see [prompts/](prompts/).
 Run these in sequence for one contest. **Every command is resume-safe** — re-running picks
 up where it left off (completed work is skipped via unique constraints).
 
+> **Where do things stand?** `bun run worker status` (or `status --contest <id>`, `--json`)
+> prints a read-only snapshot of a contest — phase, field counts, scoring coverage, bracket
+> winner, pinned config hashes — and the next command to run. It only needs `DATABASE_URL`, so
+> it's the first thing a new operator or agent should run to orient.
+
 ### 1. Create the contest ✅
 
 Put this contest's keywords and salt in a gitignored secrets file `secrets/<videoId>.json`
