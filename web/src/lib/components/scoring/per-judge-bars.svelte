@@ -15,9 +15,9 @@
 	);
 </script>
 
-<div class="mt-1 flex w-full max-w-[480px] flex-col gap-3">
+<div class="mt-1 flex w-full max-w-md flex-col gap-3">
 	{#each rows as row (row.id)}
-		<div class="grid grid-cols-[118px_1fr_46px] items-center gap-3">
+		<div class="bar-row items-center gap-3">
 			<div class={`text-sm font-medium ${row.text}`}>{row.label}</div>
 			<div class="h-2 overflow-hidden rounded-sm bg-card2">
 				<div class={`h-full rounded-sm ${row.bg}`} style={`width:${row.pct}%`}></div>
@@ -26,3 +26,10 @@
 		</div>
 	{/each}
 </div>
+
+<style>
+	.bar-row {
+		display: grid;
+		grid-template-columns: 118px 1fr 46px;
+	}
+</style>

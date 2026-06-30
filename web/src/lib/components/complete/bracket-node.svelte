@@ -19,10 +19,8 @@
 	data-mid={matchup.id}
 	onclick={onSelect}
 	class={cn(
-		"flex w-full flex-col gap-1 rounded-control border bg-bg2 p-2 text-left hover:border-line2",
-		selected
-			? "border-acc shadow-[0_0_0_2px_color-mix(in_oklch,var(--color-acc),transparent_78%)]"
-			: "border-line"
+		"flex w-full flex-col gap-1 rounded-control border bg-bg2 p-2 text-left",
+		selected ? "border-acc ring-2 ring-acc/20" : "border-line hover:border-line2"
 	)}
 >
 	{#each teams as team (team.key)}

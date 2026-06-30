@@ -8,7 +8,7 @@
 </script>
 
 <div class="overflow-x-auto">
-	<table class="w-full min-w-[420px] border-collapse text-sm">
+	<table class="w-full min-w-md border-collapse text-sm">
 		<thead>
 			<tr>
 				<th class="px-2 py-1.5 text-left text-xs font-medium text-dim">Judge</th>
@@ -22,7 +22,7 @@
 			{#each matrix as row (row.index)}
 				<tr>
 					<td
-						class={`border-t border-l-[3px] border-line py-2 pr-2 pl-2.5 text-left font-medium ${judgeBorder(row.index)} ${judgeText(row.index)}`}
+						class={`border-t border-l-2 border-line py-2 pr-2 pl-2.5 text-left font-medium ${judgeBorder(row.index)} ${judgeText(row.index)}`}
 					>
 						{row.label}
 					</td>

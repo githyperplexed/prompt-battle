@@ -36,9 +36,9 @@
 		<div class="my-4 flex items-start justify-center gap-3">
 			{#each cells as cell, i (cell.unit)}
 				{#if i > 0}
-					<div class="text-5xl leading-[1.1] font-light text-line2">:</div>
+					<div class="text-5xl leading-none font-light text-line2">:</div>
 				{/if}
-				<div class="min-w-[88px] max-md:min-w-[64px]">
+				<div class="min-w-22 max-md:min-w-16">
 					<div
 						class="font-mono text-6xl leading-none font-bold tracking-tighter tabular-nums text-acc max-md:text-4xl"
 					>

@@ -35,7 +35,7 @@
 <div class="border-t border-line first:border-t-0">
 	<button
 		type="button"
-		class="grid w-full grid-cols-[56px_1fr_92px_78px] items-center gap-2.5 px-5 py-3 text-left transition-colors hover:bg-card2"
+		class="lb-cols w-full items-center gap-2.5 px-5 py-3 text-left transition-colors hover:bg-card2"
 		onclick={onToggle}
 	>
 		<div class={`font-semibold tabular-nums ${row.advancing ? "text-tx" : "text-dim"}`}>
@@ -51,7 +51,7 @@
 		<div class="text-right">
 			{#if row.advancing}
 				<span
-					class="rounded-full border border-[color-mix(in_oklch,var(--color-acc),transparent_60%)] bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2.5 py-1 font-mono text-xs font-bold text-acc"
+					class="rounded-full border border-acc/40 bg-acc/20 px-2.5 py-1 font-mono text-xs font-bold text-acc"
 				>
 					#{row.seed}
 				</span>
@@ -65,7 +65,7 @@
 
 	{#if row.rank === cutRank}
 		<div
-			class="flex items-center justify-center border-y-2 border-dashed border-acc bg-[color-mix(in_oklch,var(--color-acc),transparent_92%)] py-2"
+			class="flex items-center justify-center border-y-2 border-dashed border-acc bg-acc/10 py-2"
 		>
 			<span
 				class="rounded-chip bg-bg px-3 py-1 font-mono text-xs font-semibold tracking-widest text-acc uppercase"
@@ -78,7 +78,7 @@
 	{#if expanded}
 		<div class="border-t border-line bg-bg2 p-5">
 			{#if detail}
-				<p class="mb-4 text-base leading-relaxed text-tx [text-wrap:pretty]">{detail.comment}</p>
+				<p class="mb-4 text-base leading-relaxed text-tx text-pretty">{detail.comment}</p>
 				<ScoreMatrix matrix={detail.matrix} score={detail.score} />
 			{:else}
 				<div class="text-sm text-dim">Loading…</div>
@@ -86,3 +86,10 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.lb-cols {
+		display: grid;
+		grid-template-columns: 56px 1fr 92px 78px;
+	}
+</style>

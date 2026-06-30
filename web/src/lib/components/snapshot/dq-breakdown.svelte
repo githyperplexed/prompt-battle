@@ -13,10 +13,10 @@
 
 	{#each dq as d (d.reason)}
 		<div
-			class="mb-2.5 grid grid-cols-[155px_1fr_50px] items-center gap-3 max-md:grid-cols-[108px_1fr_42px]"
+			class="dq-row mb-2.5 items-center gap-3"
 		>
 			<div class="font-mono text-xs text-mut">{dqLabel(d.reason)}</div>
-			<div class="h-[9px] overflow-hidden rounded-sm bg-card2">
+			<div class="h-2 overflow-hidden rounded-sm bg-card2">
 				<div
 					class="h-full rounded-sm bg-gradient-to-r from-accd to-acc"
 					style={`width:${((d.count / max) * 100).toFixed(1)}%`}
@@ -26,3 +26,16 @@
 		</div>
 	{/each}
 </Card>
+
+<style>
+	.dq-row {
+		display: grid;
+		grid-template-columns: 155px 1fr 50px;
+	}
+
+	@media (max-width: 767px) {
+		.dq-row {
+			grid-template-columns: 108px 1fr 42px;
+		}
+	}
+</style>

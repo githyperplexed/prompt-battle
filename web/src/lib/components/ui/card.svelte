@@ -8,7 +8,7 @@
 
 <div
 	class={cn(
-		"rounded-card border border-line bg-card p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_16px_32px_-26px_rgba(0,0,0,0.7)]",
+		"rounded-card border border-line bg-card p-6 shadow-card",
 		className
 	)}
 >

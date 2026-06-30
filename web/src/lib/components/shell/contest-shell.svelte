@@ -23,7 +23,7 @@
 		children: Snippet;
 	} = $props();
 
-	const wrap = "mx-auto w-full max-w-[1080px] px-6";
+	const wrap = "mx-auto w-full max-w-page px-6";
 </script>
 
 <div class={`sticky top-0 z-40 ${wrap}`}>

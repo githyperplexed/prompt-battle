@@ -8,9 +8,8 @@
 <div
 	class={cn(
 		"mt-3 rounded-control border p-4",
-		result.kind === "eligible" && "border-[color-mix(in_oklch,var(--color-ok),transparent_55%)]",
-		result.kind === "disqualified" &&
-			"border-[color-mix(in_oklch,var(--color-bad),transparent_55%)]",
+		result.kind === "eligible" && "border-ok/45",
+		result.kind === "disqualified" && "border-bad/45",
 		result.kind === "none" && "border-line"
 	)}
 >
@@ -20,13 +19,13 @@
 		<div class="mb-2.5 flex flex-wrap items-center gap-2.5">
 			{#if result.kind === "eligible"}
 				<span
-					class="rounded-chip bg-[color-mix(in_oklch,var(--color-ok),transparent_82%)] px-2.5 py-1 text-xs font-semibold text-ok"
+					class="rounded-chip bg-ok/20 px-2.5 py-1 text-xs font-semibold text-ok"
 				>
 					✓ Captured · Eligible
 				</span>
 			{:else}
 				<span
-					class="rounded-chip bg-[color-mix(in_oklch,var(--color-bad),transparent_82%)] px-2.5 py-1 text-xs font-semibold text-bad"
+					class="rounded-chip bg-bad/20 px-2.5 py-1 text-xs font-semibold text-bad"
 				>
 					✕ Disqualified
 				</span>
@@ -52,7 +51,7 @@
 				Comment body redacted — removed under content policy.
 			</div>
 		{:else if result.comment}
-			<p class="m-0 text-base leading-relaxed text-mut [text-wrap:pretty]">{result.comment}</p>
+			<p class="m-0 text-base leading-relaxed text-mut text-pretty">{result.comment}</p>
 		{/if}
 	{/if}
 </div>

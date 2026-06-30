@@ -44,7 +44,7 @@
 			<div class="flex flex-col gap-2.5">
 				{#each detail.votes as vote (vote.index)}
 					<div
-						class="grid grid-cols-[200px_1fr_auto] items-center gap-3.5 rounded-control border border-line bg-bg2 px-3.5 py-3 max-md:grid-cols-1"
+						class="vote-row items-center gap-3.5 rounded-control border border-line bg-bg2 px-3.5 py-3"
 					>
 						<div class={`text-sm font-semibold ${judgeText(vote.index)}`}>{vote.label}</div>
 						<div class="flex flex-col gap-0.5 text-sm text-mut">
@@ -55,8 +55,8 @@
 							<span
 								class={`rounded-chip px-2 py-0.5 font-mono text-xs ${
 									vote.consistent
-										? "bg-[color-mix(in_oklch,var(--color-ok),transparent_80%)] text-ok"
-										: "bg-[color-mix(in_oklch,var(--color-acc),transparent_80%)] text-acc"
+										? "bg-ok/20 text-ok"
+										: "bg-acc/20 text-acc"
 								}`}
 							>
 								{vote.consistent ? "Consistent" : "Inconsistent"}
@@ -82,7 +82,7 @@
 					<div
 						class={cn(
 							"rounded-control border bg-bg2 p-3.5",
-							won ? "border-[color-mix(in_oklch,var(--color-acc),transparent_55%)]" : "border-line"
+							won ? "border-acc/45" : "border-line"
 						)}
 					>
 						<div class="mb-2 flex items-baseline gap-2">
@@ -90,21 +90,19 @@
 							<span class="text-sm font-semibold">{entry.name}</span>
 							{#if won}
 								<span
-									class="rounded-chip bg-[color-mix(in_oklch,var(--color-acc),transparent_82%)] px-2 py-0.5 font-mono text-xs text-acc"
+									class="rounded-chip bg-acc/20 px-2 py-0.5 font-mono text-xs text-acc"
 								>
 									Winner
 								</span>
 							{/if}
 						</div>
-						<p class="text-sm leading-relaxed text-mut [text-wrap:pretty]">{entry.text}</p>
+						<p class="text-sm leading-relaxed text-mut text-pretty">{entry.text}</p>
 					</div>
 				{/each}
 			</div>
 		</Card>
 
-		<Card
-			class="border-[color-mix(in_oklch,var(--color-acc),transparent_66%)] bg-[color-mix(in_oklch,var(--color-acc),transparent_90%)]"
-		>
+		<Card class="border-acc/35 bg-acc/10">
 			<div class="flex flex-col gap-1">
 				<span class="font-bold text-acc">Winner: {detail.winnerName}</span>
 				<span class="text-base leading-relaxed text-mut">{detail.resolution}</span>
@@ -112,3 +110,16 @@
 		</Card>
 	</div>
 {/if}
+
+<style>
+	.vote-row {
+		display: grid;
+		grid-template-columns: 200px 1fr auto;
+	}
+
+	@media (max-width: 767px) {
+		.vote-row {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

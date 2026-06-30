@@ -26,7 +26,7 @@
 
 		<li class="relative flex flex-1 flex-col items-center">
 			{#if i > 0}
-				<span class="absolute top-[13px] -left-1/2 h-0.5 w-full bg-line"></span>
+				<span class="absolute top-3 -left-1/2 h-0.5 w-full bg-line"></span>
 			{/if}
 
 			<svelte:element
@@ -39,8 +39,7 @@
 					class={cn(
 						"z-1 flex size-7 items-center justify-center rounded-full border-2 font-mono text-sm font-semibold",
 						state === "done" && "border-mut bg-mut text-bg",
-						state === "current" &&
-							"border-acc bg-acc text-ink shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-acc),transparent_80%)]",
+						state === "current" && "border-acc bg-acc text-ink ring-4 ring-acc/20",
 						state === "upcoming" && "border-line bg-bg text-dim"
 					)}
 				>

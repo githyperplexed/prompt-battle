@@ -11,10 +11,10 @@
 </script>
 
 <div
-	class="flex size-[210px] items-center justify-center rounded-full"
+	class="flex size-52 items-center justify-center rounded-full"
 	style={`background: conic-gradient(var(--color-acc) ${degrees}deg, var(--color-line) 0)`}
 >
-	<div class="flex size-[158px] flex-col items-center justify-center rounded-full bg-card">
+	<div class="flex size-40 flex-col items-center justify-center rounded-full bg-card">
 		<div class="font-mono text-5xl font-bold tracking-tight tabular-nums text-acc">
 			{pct.toFixed(0)}%
 		</div>

@@ -2,7 +2,7 @@
 	import BracketNode from "$lib/components/complete/bracket-node.svelte";
 	import MatchupDetail from "$lib/components/complete/matchup-detail.svelte";
 	import { cn } from "$lib/utilities/cn";
-	import type { BracketRound } from "$lib/types/contest";
+	import type { BracketMatchup, BracketRound } from "$lib/types/contest";
 
 	let { rounds, contestId }: { rounds: BracketRound[]; contestId: string } = $props();
 
@@ -15,15 +15,56 @@
 	const activeRound = $derived(mobileRound ?? rounds.at(-1)?.round ?? 1);
 	const mobileMatchups = $derived(rounds.find((r) => r.round === activeRound)?.matchups ?? []);
 
+	type Column = { key: string; label: string; matchups: BracketMatchup[] };
+
+	// Two-sided layout: every round (except the final) is split in half — the first half
+	// flows inward from the left edge, the second half inward from the right edge — and the
+	// single final matchup sits in the center where the two sides meet.
+	const columns = $derived.by<Column[]>(() => {
+		if (rounds.length === 0) return [];
+
+		const last = rounds.length - 1;
+		const left: Column[] = [];
+		const right: Column[] = [];
+
+		for (let r = 0; r < last; r += 1) {
+			const ms = rounds[r]!.matchups;
+			const half = Math.ceil(ms.length / 2);
+			left.push({ key: `l${r}`, label: rounds[r]!.label, matchups: ms.slice(0, half) });
+			right.push({ key: `r${r}`, label: rounds[r]!.label, matchups: ms.slice(half) });
+		}
+
+		const center: Column = { key: "c", label: rounds[last]!.label, matchups: rounds[last]!.matchups };
+
+		return [...left, center, ...right.reverse()];
+	});
+
+	const maxColCount = $derived(Math.max(1, ...columns.map((c) => c.matchups.length)));
+
+	// Every column shares one node-area height so `justify-around` spaces the nodes such that
+	// each parent lands exactly between its two children. The label lives outside that area so
+	// it never offsets the distribution.
+	const GAP = 16;
+	let nodeH = $state(72);
+	const areaH = $derived(maxColCount * (nodeH + GAP));
+
 	let treeEl = $state<HTMLElement | null>(null);
 	let svgW = $state(0);
 	let svgH = $state(0);
 	let pathD = $state("");
 
-	// Measure each node and draw orthogonal elbow connectors from each pair to their parent.
+	// Measure node positions and draw orthogonal elbow connectors from each child to its parent.
+	// The elbow direction follows the child's position relative to the parent, so it works for the
+	// left side, the right (mirrored) side, and the final that joins both.
 	const draw = () => {
 		const tree = treeEl;
 		if (!tree) return;
+
+		const sample = tree.querySelector<HTMLElement>("[data-mid]");
+		if (sample) {
+			const h = sample.getBoundingClientRect().height;
+			if (h && Math.abs(h - nodeH) > 0.5) nodeH = h;
+		}
 
 		const box = tree.getBoundingClientRect();
 		svgW = tree.scrollWidth;
@@ -49,17 +90,26 @@
 			const child = rounds[ri - 1]!.matchups;
 
 			for (let k = 0; k < round.length; k += 1) {
-				const childA = child[2 * k];
-				const childB = child[2 * k + 1];
-				if (!childA || !childB) continue;
-
 				const p = pos(round[k]!.id);
-				const a = pos(childA.id);
-				const b = pos(childB.id);
-				if (!p || !a || !b) continue;
+				if (!p) continue;
 
-				const midX = (a.right + p.left) / 2;
-				d += `M${a.right} ${a.y}H${midX}V${p.y}H${p.left}M${b.right} ${b.y}H${midX}V${p.y}`;
+				for (const ci of [2 * k, 2 * k + 1]) {
+					const c = child[ci];
+					if (!c) continue;
+
+					const cp = pos(c.id);
+					if (!cp) continue;
+
+					if (cp.right <= p.left) {
+						// child sits to the left of its parent
+						const midX = (cp.right + p.left) / 2;
+						d += `M${cp.right} ${cp.y}H${midX}V${p.y}H${p.left}`;
+					} else {
+						// child sits to the right of its parent (mirrored side)
+						const midX = (p.right + cp.left) / 2;
+						d += `M${cp.left} ${cp.y}H${midX}V${p.y}H${p.right}`;
+					}
+				}
 			}
 		}
 
@@ -67,7 +117,9 @@
 	};
 
 	$effect(() => {
-		void rounds;
+		void columns;
+		void areaH;
+
 		const run = () => requestAnimationFrame(draw);
 
 		run();
@@ -75,6 +127,64 @@
 
 		return () => window.removeEventListener("resize", run);
 	});
+
+	// Click-and-drag panning of the (scrollbar-less) bracket viewport. The pointer is only
+	// captured once a real drag begins — otherwise capture would retarget the trailing click to
+	// the scroller and a plain click could never reach a matchup node.
+	let scroller = $state<HTMLElement | null>(null);
+	let dragging = $state(false);
+	let pressing = false;
+	let moved = false;
+	let startX = 0;
+	let startY = 0;
+	let startLeft = 0;
+	let startTop = 0;
+
+	const onPointerDown = (e: PointerEvent) => {
+		if (e.button !== 0 || !scroller) return;
+
+		pressing = true;
+		moved = false;
+		startX = e.clientX;
+		startY = e.clientY;
+		startLeft = scroller.scrollLeft;
+		startTop = scroller.scrollTop;
+	};
+
+	const onPointerMove = (e: PointerEvent) => {
+		if (!pressing || !scroller) return;
+
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+
+		if (!moved && Math.abs(dx) <= 4 && Math.abs(dy) <= 4) return;
+
+		if (!moved) {
+			moved = true;
+			dragging = true;
+			scroller.setPointerCapture(e.pointerId);
+		}
+
+		scroller.scrollLeft = startLeft - dx;
+		scroller.scrollTop = startTop - dy;
+	};
+
+	const onPointerUp = (e: PointerEvent) => {
+		if (!pressing) return;
+
+		pressing = false;
+		dragging = false;
+		if (scroller?.hasPointerCapture(e.pointerId)) scroller.releasePointerCapture(e.pointerId);
+	};
+
+	// Swallow the click that ends a drag so panning never selects a matchup.
+	const onClickCapture = (e: MouseEvent) => {
+		if (!moved) return;
+
+		e.stopPropagation();
+		e.preventDefault();
+		moved = false;
+	};
 </script>
 
 <h3 class="m-0 text-lg font-semibold">
@@ -112,8 +222,21 @@
 	{/each}
 </div>
 
-<!-- Desktop: horizontally-scrollable column tree with SVG elbow connectors. -->
-<div class="overflow-x-auto rounded-card border border-line bg-card max-md:hidden">
+<!-- Desktop: two-sided tree with SVG elbow connectors. Drag anywhere to pan; no scrollbar. -->
+<div
+	bind:this={scroller}
+	class={cn(
+		"bracket-viewport h-160 touch-none overflow-auto overscroll-contain rounded-card border border-line bg-card select-none max-md:hidden",
+		dragging ? "cursor-grabbing" : "cursor-grab"
+	)}
+	onpointerdown={onPointerDown}
+	onpointermove={onPointerMove}
+	onpointerup={onPointerUp}
+	onpointercancel={onPointerUp}
+	onclickcapture={onClickCapture}
+	role="group"
+	aria-label="Tournament bracket — drag to pan"
+>
 	<div bind:this={treeEl} class="relative flex min-w-max gap-5 p-5">
 		<svg
 			class="pointer-events-none absolute inset-0 z-0 overflow-visible"
@@ -124,21 +247,33 @@
 			<path d={pathD} fill="none" stroke="var(--color-line2)" stroke-width="1.5" />
 		</svg>
 
-		{#each rounds as round (round.round)}
-			<div class="relative z-1 flex min-w-[172px] flex-col justify-around gap-3">
+		{#each columns as column (column.key)}
+			<div class="relative z-1 flex min-w-43 flex-col">
 				<div class="mb-1 text-center font-mono text-xs tracking-widest text-dim uppercase">
-					{round.label}
+					{column.label}
 				</div>
-				{#each round.matchups as matchup (matchup.id)}
-					<BracketNode
-						{matchup}
-						selected={activeId === matchup.id}
-						onSelect={() => (selectedId = matchup.id)}
-					/>
-				{/each}
+				<div class="flex flex-col justify-around" style={`height:${areaH}px`}>
+					{#each column.matchups as matchup (matchup.id)}
+						<BracketNode
+							{matchup}
+							selected={activeId === matchup.id}
+							onSelect={() => (selectedId = matchup.id)}
+						/>
+					{/each}
+				</div>
 			</div>
 		{/each}
 	</div>
 </div>
 
 <MatchupDetail {contestId} matchupId={activeId} />
+
+<style>
+	.bracket-viewport {
+		scrollbar-width: none;
+	}
+
+	.bracket-viewport::-webkit-scrollbar {
+		display: none;
+	}
+</style>

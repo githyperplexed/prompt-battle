@@ -62,7 +62,7 @@
 
 <div class="overflow-hidden rounded-card border border-line bg-card">
 	<div
-		class="grid grid-cols-[56px_1fr_92px_78px] gap-2.5 border-b border-line px-5 py-3 text-xs tracking-widest text-dim uppercase"
+		class="lb-cols gap-2.5 border-b border-line px-5 py-3 text-xs tracking-widest text-dim uppercase"
 	>
 		<div>#</div>
 		<div>Entry</div>
@@ -112,3 +112,10 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.lb-cols {
+		display: grid;
+		grid-template-columns: 56px 1fr 92px 78px;
+	}
+</style>

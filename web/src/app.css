@@ -29,6 +29,10 @@
 	--radius-card: 13px;
 	--radius-control: 9px;
 	--radius-chip: 7px;
+
+	--container-page: 1080px;
+
+	--shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 16px 32px -26px rgb(0 0 0 / 0.7);
 }
 
 :root {

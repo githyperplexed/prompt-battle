@@ -17,11 +17,11 @@
 	<title>Rules & verification</title>
 </svelte:head>
 
-<div class="mx-auto w-full max-w-[1080px] px-6 py-10">
+<div class="mx-auto w-full max-w-page px-6 py-10">
 	<a class="text-sm text-mut hover:text-tx" href="/">← Back to the contest</a>
 
 	<h1 class="mt-5 mb-2 text-3xl font-bold">Rules &amp; verification</h1>
-	<p class="m-0 mb-6 max-w-[680px] text-base leading-relaxed text-mut">
+	<p class="m-0 mb-6 max-w-2xl text-base leading-relaxed text-mut">
 		This contest runs on an open-source engine. The rules, the judging code, and every recorded
 		decision are public — and the judging inputs are committed as hashes before any entry is judged,
 		so anyone can confirm the contest used the published rules and the exact frozen inputs.
@@ -33,7 +33,7 @@
 	</div>
 
 	{#if data.verification}
-		<p class="m-0 mb-3.5 max-w-[680px] text-sm leading-relaxed text-mut">
+		<p class="m-0 mb-3.5 max-w-2xl text-sm leading-relaxed text-mut">
 			These commitments were frozen when the contest was created. The
 			<b class="font-semibold text-tx">keyword set</b> is a salted hash of the hidden keywords (the
 			words stay secret until the reveal, then anyone can re-hash them to check). The
