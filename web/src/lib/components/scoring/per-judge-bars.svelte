@@ -1,35 +1,25 @@
 <script lang="ts">
-	import { judgeBg, judgeLabel, judgeText } from "$lib/utilities/judges";
+	import JudgeChip from "$lib/components/ui/judge-chip.svelte";
+	import { judgeBg } from "$lib/utilities/judges";
 
 	let { perModel, eligible }: { perModel: { id: string; done: number }[]; eligible: number } =
 		$props();
 
-	const rows = $derived(
-		perModel.map((model, i) => ({
-			id: model.id,
-			label: judgeLabel(i),
-			text: judgeText(i),
-			bg: judgeBg(i),
-			pct: eligible > 0 ? Math.min(100, Math.round((model.done / eligible) * 100)) : 0
-		}))
-	);
+	const pct = (done: number) =>
+		eligible > 0 ? Math.min(100, Math.round((done / eligible) * 100)) : 0;
 </script>
 
-<div class="mt-1 flex w-full max-w-md flex-col gap-3">
-	{#each rows as row (row.id)}
-		<div class="bar-row items-center gap-3">
-			<div class={`text-sm font-medium ${row.text}`}>{row.label}</div>
+<div class="flex w-full flex-col">
+	{#each perModel as model, i (model.id)}
+		{@const p = pct(model.done)}
+		<div class="flex flex-col gap-2 py-3 not-first:border-t not-first:border-line first:pt-0 last:pb-0">
 			<div class="h-2 overflow-hidden rounded-sm bg-card2">
-				<div class={`h-full rounded-sm ${row.bg}`} style={`width:${row.pct}%`}></div>
+				<div class={`h-full rounded-sm ${judgeBg(i)}`} style={`width:${p}%`}></div>
 			</div>
-			<div class="text-right text-xs tabular-nums text-mut">{row.pct}%</div>
+			<div class="flex items-center justify-between gap-3">
+				<JudgeChip index={i} model={model.id} />
+				<span class="flex-none font-mono text-xs tabular-nums text-mut">{p}%</span>
+			</div>
 		</div>
 	{/each}
 </div>
-
-<style>
-	.bar-row {
-		display: grid;
-		grid-template-columns: 118px 1fr 46px;
-	}
-</style>
