@@ -23,6 +23,8 @@ export const contest = pgTable("contest", {
 	config: jsonb(),
 	winnerEntryId: text(),
 	bracketFingerprint: text(),
+	similarityComputedAt: timestamp({ withTimezone: true }),
+	similarityFingerprint: text(),
 	resultsPublishedAt: timestamp({ withTimezone: true }),
 	createdAt: timestamp({ withTimezone: true }).defaultNow().notNull()
 });

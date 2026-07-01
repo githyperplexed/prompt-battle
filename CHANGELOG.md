@@ -11,6 +11,14 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
+## Current — Near-duplicate originality pass
+
+Added a deterministic similarity pass between scoring and bracket advancement. The judges still score
+each entry in isolation, but the worker now clusters near-duplicates over the frozen field and applies
+a bounded originality penalty to later copies before ranking and seeding. The similarity config is
+hashed into the contest config, cluster decisions are stored for audit, and `advance` refuses to run
+until the pass is complete for the current scored field.
+
 ## Phase 0 — Concept & rules
 
 Started from the game idea and pressure-tested it. Key design decisions:

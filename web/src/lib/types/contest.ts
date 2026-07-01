@@ -57,6 +57,10 @@ export type LeaderboardRow = {
 	submittedAt: string;
 	text: string;
 	score: number;
+	rawScore: number;
+	originalityPenalty: number;
+	clusterId: number | null;
+	nearestEarlierEntryId: string | null;
 	perModel: { model: string; total: number }[];
 	advancing: boolean;
 };
@@ -100,6 +104,15 @@ export type VerificationData = {
 	revealedSalt: string | null;
 	fingerprint: string | null;
 	judgeSettings: { key: string; value: string }[];
+	similarity: {
+		enabled: boolean;
+		hash: string;
+		embeddingModel: string;
+		preprocessingVersion: number;
+		cosineThreshold: number;
+		lexicalThreshold: number;
+		penalty: string;
+	} | null;
 };
 
 export type CompleteData = {

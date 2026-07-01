@@ -6,7 +6,8 @@ import { defaultPromptTemplates } from "../src/services/prompts";
 import {
 	createContestConfig,
 	parseContestConfig,
-	promptContentHash
+	promptContentHash,
+	similarityContentHash
 } from "../src/utilities/contest-config";
 
 const panel = [
@@ -34,9 +35,10 @@ describe("contest config", () => {
 	test("creates a versioned config with pinned prompt hashes", () => {
 		const config = createContestConfig({ keywordHash, panel, prompts });
 
-		expect(config.version).toBe(1);
+		expect(config.version).toBe(2);
 		expect(config.prompts.score.hash).toBe(promptContentHash(prompts.score));
 		expect(config.judge.requestSettings).toEqual({ maxRetries: 2, sampling: "provider_default" });
+		expect(config.similarity.hash).toBe(similarityContentHash(config.similarity));
 		expect(parseContestConfig(config)).toEqual(config);
 	});
 
@@ -70,4 +72,15 @@ describe("contest config", () => {
 			})
 		).toThrow();
 	});
+});
+
+test("rejects similarity config that does not match its pinned hash", () => {
+	const config = createContestConfig({ keywordHash, panel, prompts });
+
+	expect(() =>
+		parseContestConfig({
+			...config,
+			similarity: { ...config.similarity, cosineThreshold: 0.1 }
+		})
+	).toThrow();
 });

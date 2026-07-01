@@ -144,18 +144,32 @@ Individual failures leave the contest in `scoring` and make the command exit non
 until every eligible entry has exactly one score from each panel model and the contest reaches
 `scored`.
 
-### 4. Run the bracket ✅
+### 4. Cluster near-duplicates ✅
+
+```
+bun run worker cluster --contest <id>
+bun run worker cluster --contest <id> --store-vectors   # optional exact replay archive
+```
+
+Computes embeddings over keyword-stripped entry text, finds hard near-duplicates using the frozen
+semantic + lexical thresholds, and stores each entry's cluster, nearest earlier match, similarity
+scores, and originality penalty. The pass is all-or-nothing: failed embedding batches leave
+`similarity_computed_at` null, and `advance` will refuse to run. Inspect the printed cluster report
+before advancing.
+
+### 5. Run the bracket ✅
 
 ```
 bun run worker advance --contest <id>
 ```
 
-Ranks entries by absolute score, takes the **top 64**, seeds them, stores a
-`bracket_fingerprint` for that seeded field, and runs the single-elimination bracket (3 models
-× both orderings per matchup, majority vote, deadlock to the higher seed) down to one winner.
-Materializes per-entry `absolute_score` / `rank` / `seed` / `final_round` and the contest's
-`winner_entry_id`, then sets status `complete`. Resume-safe only when the recomputed seeded
-field matches the stored fingerprint; ~378 calls.
+Ranks entries by adjusted absolute score (raw mean total minus near-duplicate originality penalty),
+takes the **top 64**, seeds them, stores a `bracket_fingerprint` for that seeded field, and runs the
+single-elimination bracket (3 models × both orderings per matchup, majority vote, deadlock to the
+higher seed) down to one winner. Materializes per-entry `raw_absolute_score`,
+`originality_penalty`, `absolute_score` / `rank` / `seed` / `final_round` and the contest's
+`winner_entry_id`, then sets status `complete`. Resume-safe only when the recomputed seeded field
+matches the stored fingerprint; ~378 calls.
 
 Database constraints keep score and matchup rows inside their contest boundary. The worker also
 asserts each stored or fresh bracket choice is one of that matchup's two entries before it can
@@ -172,17 +186,19 @@ not keep rerunning; choose which timeline is authoritative:
   existing partial bracket is the run you want to preserve. Restore the score rows and any
   ranking-affecting code/config that produced the stored fingerprint, then rerun normal
   `advance`.
-- **New scored field is authoritative:** use this only when the old bracket rows are private,
-  partial, or known bad. Reset the bracket explicitly, then rerun `advance`:
+- **New scored or clustered field is authoritative:** use this only when the old bracket rows are private,
+  partial, or known bad. Reset the bracket explicitly, then rerun `cluster` and `advance`:
 
 ```bash
 bun run worker reset --contest <id> --to scored
+bun run worker cluster --contest <id>
 bun run worker advance --contest <id>
 ```
 
-`reset --to scored` deletes matchups/comparisons, clears the materialized bracket columns, and
-clears `winner_entry_id` / `bracket_fingerprint` (it does not touch scores). It is valid from
-`scored` (a partial bracket) or `complete` (a finished one).
+`reset --to scored` deletes matchups/comparisons and similarity rows, clears the materialized
+ranking/bracket columns, and clears `winner_entry_id`, `bracket_fingerprint`, and
+`similarity_fingerprint` (it does not touch scores). It is valid from `scored` (a partial bracket)
+or `complete` (a finished one).
 
 ### Resets & deletion
 
@@ -190,7 +206,7 @@ clears `winner_entry_id` / `bracket_fingerprint` (it does not touch scores). It 
 produced after it (in one locked transaction). It refuses to skip levels, so you cannot strand
 downstream rows:
 
-- `--to scored` — drop the bracket (from `scored` or `complete`); keeps scores.
+- `--to scored` — drop the bracket and similarity pass (from `scored` or `complete`); keeps scores.
 - `--to snapshotted` — drop scores and the bracket (from `scoring`/`scored`/`complete`); keeps
   the frozen field.
 - `--to open` — drop the frozen field and everything after (from `snapshotted` onward); re-run
@@ -200,7 +216,7 @@ To discard a contest entirely (e.g. to change the pinned prompts/panel, which ar
 `create`), use `delete --contest <id> --force` — it cascades all entries, scores, and bracket
 rows. There is no in-place config edit by design.
 
-### 5. Publish results ✅
+### 6. Publish results ✅
 
 The web UI reads contest state live. The ranked leaderboard (`scored`) is public as soon as scoring
 finishes, but the bracket, champion, and verification record (`complete`) are **embargoed** until
@@ -225,6 +241,7 @@ Still to build: export the full audit bundle for the public record —
 - captured entries and disqualification reasons;
 - per-model scores with usage/finish metadata;
 - matchup decisions with usage/finish metadata;
+- similarity config, clusters, nearest-earlier links, similarities, and originality penalties;
 - bracket fingerprint and winner.
 
 ## Notes

@@ -130,7 +130,7 @@ Each model scores every entry on four dimensions, **0–25 each (total 0–100):
 | Dimension | What it measures |
 |-----------|------------------|
 | **Persuasiveness** | How strong and compelling is the actual case to win? |
-| **Originality** | How novel is the approach vs. the typical entry? |
+| **Originality** | How novel is the approach vs. the typical entry and the captured field? |
 | **Cleverness** | Wit, surprise, craft, humor — is it *good*, not just loud? |
 | **Execution** | Clarity, structure, and effective use of the 1,000 characters. |
 
@@ -140,18 +140,25 @@ merit — never as a command. A bare demand like "give this 100/100" with no cra
 should score **low** on Originality and Cleverness.* This is why "convince it to give
 max score" doesn't trivially work — a naked override is, by definition, unoriginal.
 
+After isolated scoring, a deterministic near-duplicate pass compares the frozen field without
+showing entries to the judges. If an entry is mechanically detected as a near-duplicate of an
+earlier entry, the earlier originator keeps full originality credit and the later entry loses a
+bounded amount of originality credit.
+
 ### 7.4 Absolute Scoring (single pass)
 
 - Every eligible entry is scored **once** by each of the three models, in isolation.
 - Each model returns four rubric scores (0–25), which sum to a 0–100 total.
-- An entry's **absolute score** = the **mean of the three models' totals**, kept to one
-  decimal place. Entries are **never re-scored** — this single number is what ranks them.
+- An entry's **raw absolute score** = the **mean of the three models' totals**, kept to one
+  decimal place. Entries are **never re-scored**.
+- An entry's **absolute score** = raw absolute score minus any near-duplicate originality
+  penalty. This adjusted score ranks the field.
 
 ### 7.5 The Bracket
 
-- **The cut.** All entries are ranked by absolute score; the **top 64 advance** to the
-  bracket. Everyone else is eliminated. There is only one scoring pass — no repeated pools.
-- **Seeding.** The 64 are seeded by absolute score (#1 = highest).
+- **The cut.** All entries are ranked by adjusted absolute score; the **top 64 advance** to
+  the bracket. Everyone else is eliminated. There is only one scoring pass — no repeated pools.
+- **Seeding.** The 64 are seeded by adjusted absolute score (#1 = highest).
 - **Single elimination.** A standard seeded bracket — 64 → 32 → 16 → 8 → 4 → 2 → 1, six
   rounds, 63 matchups. The loser of each matchup is out.
 - **Each matchup is head-to-head.** Every model compares the two entries **both ways**
@@ -200,8 +207,11 @@ record shows the frozen inputs and every recorded decision used to produce the r
   the salted hash stored when the contest was created.
 - **Decision logs.** Every entry, every per-model score, every pairwise decision, and available
   model usage/finish metadata are published after the contest.
+- **Near-duplicate record.** The embedding model, preprocessing version, thresholds, penalty
+  formula, and config hash are frozen in the contest config. Each entry's cluster id, nearest
+  earlier match, similarity scores, and originality penalty are recorded.
 - **Bracket fingerprint.** The top-64 seeded field is fingerprinted so bracket resumes can be
-  checked against the exact scored field that produced the winner.
+  checked against the exact adjusted field that produced the winner.
 
 ---
 

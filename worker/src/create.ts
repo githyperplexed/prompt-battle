@@ -65,4 +65,5 @@ export const runCreate = async () => {
 	console.log(`  keyword hash:  ${hash}`);
 	console.log(`  score prompt:  ${config.prompts.score.hash}`);
 	console.log(`  compare prompt: ${config.prompts.compare.hash}`);
+	console.log(`  similarity:    ${config.similarity.hash}`);
 };

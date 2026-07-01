@@ -49,6 +49,8 @@ export const entry = pgTable(
 		// automated/ingest-time DQs, so a non-null note marks a hand-issued, human-judged removal.
 		dqNote: text(),
 		absoluteScore: real(),
+		rawAbsoluteScore: real(),
+		originalityPenalty: real(),
 		rank: integer(),
 		seed: integer(),
 		finalRound: integer(),

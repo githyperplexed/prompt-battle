@@ -10,6 +10,7 @@ const COMMANDS = [
 	"ingest",
 	"dq",
 	"score",
+	"cluster",
 	"advance",
 	"reset",
 	"delete",
@@ -56,6 +57,12 @@ const main = async () => {
 				const { runScore } = await import("$src/score");
 
 				await runScore();
+				break;
+			}
+			case "cluster": {
+				const { runCluster } = await import("$src/cluster");
+
+				await runCluster();
 				break;
 			}
 			case "advance": {

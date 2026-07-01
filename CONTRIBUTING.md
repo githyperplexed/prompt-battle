@@ -26,7 +26,7 @@ print width.** Don't fight it by hand.
   (transforms, validation, parsing, hashing, building request payloads) — goes in
   `utilities/`. Anything that performs or orchestrates I/O — database, network/API,
   filesystem, env — goes in `services/`. Services may call utilities; utilities never import
-  services. CLI / command files stay thin and delegate to services.
+  services. CLI / command files stay thin and delegate to services. Similarity clustering follows this split: embedding/database orchestration stays in `services/`, while normalization, shingling, cosine/Jaccard math, fingerprinting, and clustering stay in `utilities/`.
 - **Tailwind classes:** always compose with the `cn()` helper (clsx + tailwind-merge).
   Never raw string concatenation or bare template literals for class lists.
 - **Imports:** group logically — built-ins, then third-party, then internal (`@prompt-battle/db`

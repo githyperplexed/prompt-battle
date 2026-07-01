@@ -44,7 +44,7 @@
 				<span class="block font-medium">{row.author}</span>
 				<span class="font-mono text-xs text-dim"><LocalTime iso={row.submittedAt} /></span>
 				<p class="mt-1.5 text-sm leading-relaxed text-mut text-pretty">
-					{expanded || !long ? row.text : `${row.text.slice(0, PREVIEW)}…`}
+					{expanded || !long ? row.text : `${row.text.slice(0, PREVIEW)}...`}
 				</p>
 				{#if long}
 					<span class="font-mono text-xs text-mut">{expanded ? "Show less" : "Show more"}</span>
@@ -62,6 +62,14 @@
 			</div>
 			<div class="text-right">
 				<span class="font-mono text-lg font-bold tabular-nums">{row.score.toFixed(1)}</span>
+				{#if row.originalityPenalty > 0}
+					<span class="block font-mono text-xs text-warn tabular-nums">
+						-{row.originalityPenalty.toFixed(1)} originality
+					</span>
+					<span class="block font-mono text-xs text-dim tabular-nums">
+						raw {row.rawScore.toFixed(1)} / cluster {row.clusterId}
+					</span>
+				{/if}
 			</div>
 		</div>
 	</button>
@@ -73,7 +81,7 @@
 			<span
 				class="rounded-chip bg-bg px-3 py-1 font-mono text-xs font-semibold tracking-widest text-acc uppercase"
 			>
-				Top 64 cut line · seeds above advance
+				Top 64 cut line / seeds above advance
 			</span>
 		</div>
 	{/if}
@@ -82,12 +90,12 @@
 <style>
 	.lb-cols {
 		display: grid;
-		grid-template-columns: 56px 1fr 92px;
+		grid-template-columns: 56px 1fr 120px;
 	}
 
 	/* Skip layout/paint for off-screen rows so a multi-thousand-row list stays smooth. */
 	.lb-entry {
 		content-visibility: auto;
-		contain-intrinsic-size: auto 96px;
+		contain-intrinsic-size: auto 104px;
 	}
 </style>

@@ -1,4 +1,4 @@
-import { contest, db, entry, eq, matchup, score, sql } from "@prompt-battle/db";
+import { contest, db, entry, eq, matchup, score, similarity, sql } from "@prompt-battle/db";
 
 import { canResetTo, type ResetTarget } from "$src/utilities/contest-status";
 import { withContestLock } from "$src/services/locks";
@@ -41,7 +41,14 @@ export const createContest = async (input: CreateContestInput) => {
 // finalRound via finalize), never by `score`. A freshly-scored contest has them null, so any
 // reset to `scored` or earlier clears them; the raw per-model scores live in the `score` table,
 // which these resets keep.
-const clearRankingColumns = { absoluteScore: null, rank: null, seed: null, finalRound: null };
+const clearRankingColumns = {
+	absoluteScore: null,
+	rawAbsoluteScore: null,
+	originalityPenalty: null,
+	rank: null,
+	seed: null,
+	finalRound: null
+};
 
 // Unwinds a contest to an earlier stage, deleting everything produced after it. Matchups are
 // deleted before entries because matchup/comparison reference entries without ON DELETE
@@ -63,26 +70,46 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 			}
 
 			await tx.delete(matchup).where(eq(matchup.contestId, contestId));
+			await tx.delete(similarity).where(eq(similarity.contestId, contestId));
 
 			if (to === "open") {
 				await tx.delete(score).where(eq(score.contestId, contestId));
 				await tx.delete(entry).where(eq(entry.contestId, contestId));
 				await tx
 					.update(contest)
-					.set({ status: "open", capturedAt: null, winnerEntryId: null, bracketFingerprint: null })
+					.set({
+						status: "open",
+						capturedAt: null,
+						winnerEntryId: null,
+						bracketFingerprint: null,
+						similarityComputedAt: null,
+						similarityFingerprint: null
+					})
 					.where(eq(contest.id, contestId));
 			} else if (to === "snapshotted") {
 				await tx.delete(score).where(eq(score.contestId, contestId));
 				await tx.update(entry).set(clearRankingColumns).where(eq(entry.contestId, contestId));
 				await tx
 					.update(contest)
-					.set({ status: "snapshotted", winnerEntryId: null, bracketFingerprint: null })
+					.set({
+						status: "snapshotted",
+						winnerEntryId: null,
+						bracketFingerprint: null,
+						similarityComputedAt: null,
+						similarityFingerprint: null
+					})
 					.where(eq(contest.id, contestId));
 			} else {
 				await tx.update(entry).set(clearRankingColumns).where(eq(entry.contestId, contestId));
 				await tx
 					.update(contest)
-					.set({ status: "scored", winnerEntryId: null, bracketFingerprint: null })
+					.set({
+						status: "scored",
+						winnerEntryId: null,
+						bracketFingerprint: null,
+						similarityComputedAt: null,
+						similarityFingerprint: null
+					})
 					.where(eq(contest.id, contestId));
 			}
 
@@ -103,6 +130,7 @@ export const deleteContest = async (contestId: string) =>
 			if (!found) throw new Error(`No contest with id ${contestId}`);
 
 			await tx.delete(matchup).where(eq(matchup.contestId, contestId));
+			await tx.delete(similarity).where(eq(similarity.contestId, contestId));
 			await tx.delete(score).where(eq(score.contestId, contestId));
 			await tx.delete(entry).where(eq(entry.contestId, contestId));
 			await tx.delete(contest).where(eq(contest.id, contestId));

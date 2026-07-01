@@ -8,6 +8,7 @@ type ConfigShape = {
 	panel?: { id: string }[];
 	keywordHash?: string;
 	prompts?: { score?: { hash?: string }; compare?: { hash?: string } };
+	similarity?: { hash?: string };
 };
 
 export const listContestSummaries = async (): Promise<ContestSummary[]> => {
@@ -124,6 +125,9 @@ export const loadStatusReport = async (contestId: string): Promise<StatusReport 
 		scorePromptHash: config?.prompts?.score?.hash ?? "—",
 		comparePromptHash: config?.prompts?.compare?.hash ?? "—",
 		keywordHash: config?.keywordHash ?? "—",
+		similarityHash: config?.similarity?.hash ?? "—",
+		similarityComputedAt: c.similarityComputedAt?.toISOString() ?? null,
+		similarityFingerprint: c.similarityFingerprint,
 		field,
 		scoring,
 		bracket

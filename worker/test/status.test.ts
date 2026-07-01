@@ -15,6 +15,9 @@ const report: StatusReport = {
 	scorePromptHash: "3c7941cda77642de",
 	comparePromptHash: "a4abb44c0bd9c253",
 	keywordHash: "92b3a4b095a228a4",
+	similarityHash: "8d184f8432b8c1af",
+	similarityComputedAt: null,
+	similarityFingerprint: null,
 	field: {
 		total: 2301,
 		eligible: 100,

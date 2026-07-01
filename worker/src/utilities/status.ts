@@ -13,6 +13,9 @@ export type StatusReport = {
 	scorePromptHash: string;
 	comparePromptHash: string;
 	keywordHash: string;
+	similarityHash: string;
+	similarityComputedAt: string | null;
+	similarityFingerprint: string | null;
 	field: { total: number; eligible: number; disqualified: number; dq: DqCount[] } | null;
 	scoring: {
 		done: number;
@@ -44,7 +47,7 @@ export const nextStep = (status: string, published: boolean): string => {
 		case "scoring":
 			return "score --contest <id>  (resume — scoring incomplete)";
 		case "scored":
-			return "advance --contest <id>";
+			return "cluster --contest <id>, then advance --contest <id>";
 		case "complete":
 			return published
 				? "results published — pipeline complete"
@@ -75,6 +78,7 @@ export const formatStatusReport = (report: StatusReport): string[] => {
 	row("score prompt:", shortHash(report.scorePromptHash));
 	row("compare:", shortHash(report.comparePromptHash));
 	row("keywords:", shortHash(report.keywordHash));
+	row("similarity:", shortHash(report.similarityHash));
 
 	if (report.field) {
 		lines.push("");
@@ -93,6 +97,10 @@ export const formatStatusReport = (report: StatusReport): string[] => {
 			`${report.scoring.done} / ${report.scoring.expected}${report.scoring.complete ? "  (complete)" : ""}`
 		);
 		row("per model:", report.scoring.perModel.map((m) => `${m.id} ${m.done}`).join(" · ") || "—");
+	}
+
+	if (report.scoring) {
+		row("clustered:", report.similarityComputedAt ? "yes" : "no");
 	}
 
 	if (report.bracket) {

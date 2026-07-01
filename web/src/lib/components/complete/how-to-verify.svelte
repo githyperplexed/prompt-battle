@@ -85,11 +85,27 @@
 	<div class="flex flex-col gap-3 rounded-card border border-line bg-card p-5">
 		{@render head(3, "The scored field & seeding", "After the results", false)}
 		<p class="text-sm leading-relaxed text-mut">
-			Every eligible entry was scored once by each model; an entry's absolute score is the mean of
-			the three totals. From the published per-model scores, recompute each absolute score, rank the
-			field, and take the top 64. That seeded field is fingerprinted — recompute the fingerprint and
-			compare to this one.
+			Every eligible entry was scored once by each model; raw absolute score is the mean of the
+			three totals. Near-duplicate entries then lose originality credit by a deterministic
+			similarity pass, and the adjusted score ranks the field and seeds the top 64. That seeded
+			field is fingerprinted — recompute the fingerprint and compare to this one.
 		</p>
+		{#if verification.similarity}
+			<CopyField label="Similarity config" value={verification.similarity.hash} />
+			<div class="grid gap-2 sm:grid-cols-2">
+				<div class="rounded-control border border-line bg-bg2 px-3 py-2.5">
+					<span class="block text-xs tracking-widest text-dim uppercase">Embedding model</span>
+					<span class="font-mono text-xs text-tx">{verification.similarity.embeddingModel}</span>
+				</div>
+				<div class="rounded-control border border-line bg-bg2 px-3 py-2.5">
+					<span class="block text-xs tracking-widest text-dim uppercase">Thresholds</span>
+					<span class="font-mono text-xs text-tx">
+						{verification.similarity.cosineThreshold} cosine / {verification.similarity
+							.lexicalThreshold} lexical
+					</span>
+				</div>
+			</div>
+		{/if}
 		<CopyField label="Bracket fingerprint" value={verification.fingerprint ?? "–"} />
 	</div>
 

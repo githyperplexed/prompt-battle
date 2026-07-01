@@ -64,6 +64,13 @@
       "when": 1782921506678,
       "tag": "0008_powerful_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782931388455,
+      "tag": "0009_clean_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

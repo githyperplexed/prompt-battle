@@ -1,6 +1,16 @@
 import Bottleneck from "bottleneck";
 
-import { comparison, contest, db, entry, eq, matchup, score, sql } from "@prompt-battle/db";
+import {
+	comparison,
+	contest,
+	db,
+	entry,
+	eq,
+	matchup,
+	score,
+	similarity,
+	sql
+} from "@prompt-battle/db";
 
 import { BRACKET_SIZE } from "$src/constants";
 import { parseContestConfig, type ContestConfig } from "$src/utilities/contest-config";
@@ -12,6 +22,7 @@ import {
 	tallyMatchup
 } from "$src/utilities/bracket";
 import { aggregateTotals, rankEntries } from "$src/utilities/ranking";
+import { similarityInputFingerprint } from "$src/utilities/similarity";
 import { compareEntries } from "$src/services/judge";
 import { withContestLock } from "$src/services/locks";
 
@@ -30,6 +41,8 @@ type RankedEntry = {
 	id: string;
 	text: string;
 	absoluteScore: number;
+	rawAbsoluteScore: number;
+	originalityPenalty: number;
 	rank: number;
 	seed: number | null;
 };
@@ -37,20 +50,26 @@ type RankedEntry = {
 const persistRankings = async (rows: RankedEntry[]) => {
 	for (let i = 0; i < rows.length; i += RESULT_CHUNK) {
 		await Promise.all(
-			rows
-				.slice(i, i + RESULT_CHUNK)
-				.map((r) =>
-					db
-						.update(entry)
-						.set({ absoluteScore: r.absoluteScore, rank: r.rank, seed: r.seed })
-						.where(eq(entry.id, r.id))
-				)
+			rows.slice(i, i + RESULT_CHUNK).map((r) =>
+				db
+					.update(entry)
+					.set({
+						absoluteScore: r.absoluteScore,
+						rawAbsoluteScore: r.rawAbsoluteScore,
+						originalityPenalty: r.originalityPenalty,
+						rank: r.rank,
+						seed: r.seed
+					})
+					.where(eq(entry.id, r.id))
+			)
 		);
 	}
 };
 
 const loadRankedField = async (
-	contestId: string
+	contestId: string,
+	config: ContestConfig,
+	similarityFingerprint: string | null
 ): Promise<{ ranked: RankedEntry[]; seeded: Seeded[]; fingerprint: string }> => {
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
@@ -58,16 +77,63 @@ const loadRankedField = async (
 	});
 
 	const scores = await db
-		.select({ entryId: score.entryId, total: score.total })
+		.select({ entryId: score.entryId, total: score.total, originality: score.originality })
 		.from(score)
 		.where(eq(score.contestId, contestId));
 
 	const totalsByEntry = new Map<string, number[]>();
+	const originalityByEntry = new Map<string, number[]>();
 
 	for (const s of scores) {
-		const list = totalsByEntry.get(s.entryId) ?? [];
-		list.push(s.total);
-		totalsByEntry.set(s.entryId, list);
+		const totals = totalsByEntry.get(s.entryId) ?? [];
+		totals.push(s.total);
+		totalsByEntry.set(s.entryId, totals);
+
+		const originality = originalityByEntry.get(s.entryId) ?? [];
+		originality.push(s.originality);
+		originalityByEntry.set(s.entryId, originality);
+	}
+
+	const meanOriginality = new Map<string, number>();
+	for (const [entryId, values] of originalityByEntry) {
+		meanOriginality.set(entryId, values.reduce((sum, value) => sum + value, 0) / values.length);
+	}
+
+	const penalties = new Map<string, number>();
+	if (config.similarity.enabled) {
+		if (!similarityFingerprint) {
+			throw new Error(`Contest ${contestId}: run 'cluster --contest ${contestId}' before advance.`);
+		}
+
+		const expectedFingerprint = similarityInputFingerprint(
+			config.similarity.hash,
+			entries.map((e) => ({
+				id: e.id,
+				publishedAt: e.publishedAt,
+				text: e.text,
+				meanOriginality: meanOriginality.get(e.id) ?? 0
+			}))
+		);
+
+		if (expectedFingerprint !== similarityFingerprint) {
+			throw new Error(
+				`Contest ${contestId}: similarity fingerprint mismatch. Re-run 'cluster --contest ${contestId}' before advance.`
+			);
+		}
+
+		const rows = await db.query.similarity.findMany({
+			where: (s, { and, eq }) =>
+				and(eq(s.contestId, contestId), eq(s.fieldFingerprint, similarityFingerprint)),
+			columns: { entryId: true, originalityPenalty: true }
+		});
+
+		if (rows.length !== entries.length) {
+			throw new Error(
+				`Contest ${contestId}: similarity coverage incomplete (${rows.length} / ${entries.length}). Re-run 'cluster --contest ${contestId}'.`
+			);
+		}
+
+		for (const row of rows) penalties.set(row.entryId, row.originalityPenalty);
 	}
 
 	const rankable = entries.flatMap((e) => {
@@ -75,13 +141,28 @@ const loadRankedField = async (
 
 		if (!totals || totals.length === 0) return [];
 
-		return [{ id: e.id, text: e.text, publishedAt: e.publishedAt, ...aggregateTotals(totals) }];
+		const aggregate = aggregateTotals(totals);
+		const originalityPenalty = penalties.get(e.id) ?? 0;
+
+		return [
+			{
+				id: e.id,
+				text: e.text,
+				publishedAt: e.publishedAt,
+				rawAbsoluteScore: aggregate.absoluteScore,
+				originalityPenalty,
+				...aggregate,
+				absoluteScore: Math.round((aggregate.absoluteScore - originalityPenalty) * 10) / 10
+			}
+		];
 	});
 
 	const ranked = rankEntries(rankable).map((e, i) => ({
 		id: e.id,
 		text: e.text,
 		absoluteScore: e.absoluteScore,
+		rawAbsoluteScore: e.rawAbsoluteScore,
+		originalityPenalty: e.originalityPenalty,
 		rank: i + 1,
 		seed: i < BRACKET_SIZE ? i + 1 : null
 	}));
@@ -338,7 +419,13 @@ export const advanceContest = async (contestId: string) =>
 	withContestLock(contestId, async () => {
 		const target = await db.query.contest.findFirst({
 			where: (c, { eq }) => eq(c.id, contestId),
-			columns: { id: true, status: true, config: true }
+			columns: {
+				id: true,
+				status: true,
+				config: true,
+				similarityComputedAt: true,
+				similarityFingerprint: true
+			}
 		});
 
 		if (!target) throw new Error(`No contest with id ${contestId}`);
@@ -349,7 +436,15 @@ export const advanceContest = async (contestId: string) =>
 			return { skipped: true as const, status: target.status };
 		}
 
-		const { ranked, seeded, fingerprint } = await loadRankedField(contestId);
+		if (config.similarity.enabled && !target.similarityComputedAt) {
+			throw new Error(`Contest ${contestId}: run 'cluster --contest ${contestId}' before advance.`);
+		}
+
+		const { ranked, seeded, fingerprint } = await loadRankedField(
+			contestId,
+			config,
+			target.similarityFingerprint
+		);
 		const bracket = await ensureBracketFingerprint(contestId, fingerprint);
 
 		if (bracket.skipped) return bracket;

@@ -1,4 +1,14 @@
-import { and, comparison, count, db, entry, eq, matchup, score } from "$lib/server/database";
+import {
+	and,
+	comparison,
+	count,
+	db,
+	entry,
+	eq,
+	matchup,
+	score,
+	similarity
+} from "$lib/server/database";
 import type {
 	CompleteData,
 	EntryListData,
@@ -32,6 +42,15 @@ type ContestConfigShape = {
 	revealed?: { keywords: string[]; salt: string };
 	prompts?: { score?: { hash?: string }; compare?: { hash?: string } };
 	judge?: { requestSettings?: { maxRetries?: number; sampling?: string } };
+	similarity?: {
+		enabled?: boolean;
+		hash?: string;
+		embeddingModel?: { slug?: string };
+		preprocessingVersion?: number;
+		cosineThreshold?: number;
+		lexicalThreshold?: number;
+		penalty?: { mode?: string; hardPoints?: number; softCoefficient?: number };
+	};
 };
 
 const panelIdsOf = (config: unknown): string[] =>
@@ -55,7 +74,18 @@ const buildVerification = (
 			{ key: "max retries", value: String(settings?.maxRetries ?? "–") },
 			{ key: "sampling", value: settings?.sampling ?? "–" },
 			{ key: "orderings", value: "2 (A-first, B-first)" }
-		]
+		],
+		similarity: config?.similarity
+			? {
+					enabled: !!config.similarity.enabled,
+					hash: config.similarity.hash ?? "–",
+					embeddingModel: config.similarity.embeddingModel?.slug ?? "–",
+					preprocessingVersion: config.similarity.preprocessingVersion ?? 0,
+					cosineThreshold: config.similarity.cosineThreshold ?? 0,
+					lexicalThreshold: config.similarity.lexicalThreshold ?? 0,
+					penalty: `${config.similarity.penalty?.mode ?? "–"}; hard ${config.similarity.penalty?.hardPoints ?? "–"}; soft ${config.similarity.penalty?.softCoefficient ?? "–"}`
+				}
+			: null
 	};
 };
 
@@ -185,6 +215,10 @@ export const loadLeaderboard = async (
 	contestId: string,
 	panel: string[]
 ): Promise<LeaderboardData> => {
+	const target = await db.query.contest.findFirst({
+		where: (c, { eq }) => eq(c.id, contestId),
+		columns: { similarityFingerprint: true }
+	});
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
 		columns: { id: true, authorDisplayName: true, channelId: true, publishedAt: true, text: true }
@@ -194,9 +228,24 @@ export const loadLeaderboard = async (
 		.select({ entryId: score.entryId, modelId: score.modelId, total: score.total })
 		.from(score)
 		.where(eq(score.contestId, contestId));
+	const currentSimilarityRows = target?.similarityFingerprint
+		? await db.query.similarity.findMany({
+				where: (s, { and, eq }) =>
+					and(eq(s.contestId, contestId), eq(s.fieldFingerprint, target.similarityFingerprint!)),
+				columns: {
+					entryId: true,
+					clusterId: true,
+					nearestEarlierEntryId: true,
+					originalityPenalty: true
+				}
+			})
+		: [];
+	const similarityRows =
+		currentSimilarityRows.length === entries.length ? currentSimilarityRows : [];
 
 	const totalsByEntry = new Map<string, number[]>();
 	const perModelByEntry = new Map<string, Map<string, number>>();
+	const similarityByEntry = new Map(similarityRows.map((row) => [row.entryId, row]));
 
 	for (const row of scoreRows) {
 		const list = totalsByEntry.get(row.entryId) ?? [];
@@ -208,11 +257,14 @@ export const loadLeaderboard = async (
 		perModelByEntry.set(row.entryId, byModel);
 	}
 
-	// `publishedAt` doubles as the rank tiebreaker (earlier submission wins) and the displayed time.
 	const rankable = entries.flatMap((e) => {
 		const totals = totalsByEntry.get(e.id);
 
 		if (!totals || totals.length === 0) return [];
+
+		const aggregate = aggregateTotals(totals);
+		const similarity = similarityByEntry.get(e.id);
+		const originalityPenalty = similarity?.originalityPenalty ?? 0;
 
 		return [
 			{
@@ -222,7 +274,12 @@ export const loadLeaderboard = async (
 				publishedAt: e.publishedAt,
 				text: e.text,
 				byModel: perModelByEntry.get(e.id) ?? new Map<string, number>(),
-				...aggregateTotals(totals)
+				...aggregate,
+				rawScore: aggregate.absoluteScore,
+				originalityPenalty,
+				clusterId: similarity?.clusterId ?? null,
+				nearestEarlierEntryId: similarity?.nearestEarlierEntryId ?? null,
+				absoluteScore: Math.round((aggregate.absoluteScore - originalityPenalty) * 10) / 10
 			}
 		];
 	});
@@ -234,7 +291,10 @@ export const loadLeaderboard = async (
 		submittedAt: e.publishedAt.toISOString(),
 		text: e.text,
 		score: e.absoluteScore,
-		// Per-model totals in panel order, so the display colors align with the judge index.
+		rawScore: e.rawScore,
+		originalityPenalty: e.originalityPenalty,
+		clusterId: e.clusterId,
+		nearestEarlierEntryId: e.nearestEarlierEntryId,
 		perModel: panel.flatMap((model) => {
 			const total = e.byModel.get(model);
 
