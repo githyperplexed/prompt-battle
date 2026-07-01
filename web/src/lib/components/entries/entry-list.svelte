@@ -1,6 +1,8 @@
 <script lang="ts">
 	import LocalTime from "$lib/components/ui/local-time.svelte";
 	import type { EntryListData } from "$lib/types/contest";
+	import { cn } from "$lib/utilities/cn";
+	import { hasTextSelection } from "$lib/utilities/dom";
 	import { dqLabel } from "$lib/utilities/labels";
 
 	let { data }: { data: EntryListData } = $props();
@@ -29,6 +31,7 @@
 	});
 
 	const toggle = (id: string) => {
+		if (hasTextSelection()) return;
 		expanded = { ...expanded, [id]: !expanded[id] };
 	};
 </script>
@@ -60,7 +63,10 @@
 				{@const open = expanded[e.id] ?? false}
 				<button
 					type="button"
-					class="entry flex w-full flex-col gap-1 border-t border-line px-5 py-3 text-left transition-colors first:border-t-0 hover:bg-card2"
+					class={cn(
+						"entry flex w-full cursor-text flex-col gap-1 border-t border-line px-5 py-3 text-left transition-colors select-text first:border-t-0 hover:bg-card2",
+						long && "cursor-pointer"
+					)}
 					onclick={() => long && toggle(e.id)}
 				>
 					<div class="flex items-baseline justify-between gap-3">
@@ -81,7 +87,7 @@
 							{open || !long ? e.text : `${e.text.slice(0, PREVIEW)}…`}
 						</p>
 						{#if long}
-							<span class="font-mono text-xs text-acc">{open ? "Show less" : "Show more"}</span>
+							<span class="font-mono text-xs text-mut">{open ? "Show less" : "Show more"}</span>
 						{/if}
 					{/if}
 				</button>

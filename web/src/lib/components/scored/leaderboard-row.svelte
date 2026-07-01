@@ -1,6 +1,8 @@
 <script lang="ts">
 	import LocalTime from "$lib/components/ui/local-time.svelte";
 	import type { LeaderboardRow } from "$lib/types/contest";
+	import { cn } from "$lib/utilities/cn";
+	import { hasTextSelection } from "$lib/utilities/dom";
 
 	let {
 		row,
@@ -16,13 +18,22 @@
 
 	const PREVIEW = 100;
 	const long = $derived(row.text.length > PREVIEW);
+
+	const handleClick = () => {
+		// Don't toggle when the click is the end of a text selection drag.
+		if (!long || hasTextSelection()) return;
+		onToggle();
+	};
 </script>
 
 <div class="lb-entry border-t border-line first:border-t-0">
 	<button
 		type="button"
-		class="w-full text-left transition-colors hover:bg-card2"
-		onclick={() => long && onToggle()}
+		class={cn(
+			"w-full cursor-text text-left transition-colors select-text hover:bg-card2",
+			long && "cursor-pointer"
+		)}
+		onclick={handleClick}
 	>
 		<div class="lb-cols items-start gap-2.5 px-5 py-3">
 			<div class={`font-semibold tabular-nums ${row.advancing ? "text-tx" : "text-dim"}`}>
@@ -35,7 +46,7 @@
 					{expanded || !long ? row.text : `${row.text.slice(0, PREVIEW)}…`}
 				</p>
 				{#if long}
-					<span class="font-mono text-xs text-acc">{expanded ? "Show less" : "Show more"}</span>
+					<span class="font-mono text-xs text-mut">{expanded ? "Show less" : "Show more"}</span>
 				{/if}
 			</div>
 			<div class="text-right">
