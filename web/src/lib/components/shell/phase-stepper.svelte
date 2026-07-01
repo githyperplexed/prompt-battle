@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { dev } from "$app/environment";
 	import { page } from "$app/state";
 
 	import { cn } from "$lib/utilities/cn";
@@ -11,29 +10,36 @@
 		type RenderState
 	} from "$lib/utilities/phases";
 
-	let { current }: { current: RenderState } = $props();
+	let { current, progress }: { current: RenderState; progress: RenderState } = $props();
 
+	// `currentIndex` is the phase being viewed (drives the highlight); `progressIndex` is the real
+	// lifecycle position (drives the checkmark), so a completed phase stays checked even while viewed.
+	// Once the contest is finished (published `complete`), the terminal Complete step is itself done,
+	// so the boundary moves past the last step to check every phase.
 	const currentIndex = $derived(stepIndexFor(current));
+	const progressIndex = $derived(
+		progress === "complete" ? STEP_LABELS.length : stepIndexFor(progress)
+	);
 
-	// Dev-only: each step links to its phase via the ?phase= override, dropping params owned by other
-	// phases so stale state never carries across a phase switch.
+	// Anyone can jump to any phase via the ?phase= selector; the server still gates what data (if any)
+	// that phase reveals. Params owned by other phases are dropped so stale state never carries across.
 	const phaseLink = (i: number) => phaseQuery(page.url.searchParams, PHASES[i]!);
 </script>
 
 <ol class="flex rounded-b-card border border-t-0 border-line bg-card px-5 py-4">
 	{#each STEP_LABELS as label, i (label)}
-		{@const state = i < currentIndex ? "done" : i === currentIndex ? "current" : "upcoming"}
+		{@const completed = i < progressIndex}
+		{@const state = i === currentIndex ? "current" : completed ? "done" : "upcoming"}
 
 		<li class="relative flex flex-1 flex-col items-center">
 			{#if i > 0}
 				<span class="absolute top-3 -left-1/2 h-0.5 w-full bg-line"></span>
 			{/if}
 
-			<svelte:element
-				this={dev ? "a" : "div"}
-				href={dev ? phaseLink(i) : undefined}
+			<a
+				href={phaseLink(i)}
 				data-sveltekit-noscroll
-				class={cn("flex flex-col items-center gap-2", dev && "cursor-pointer")}
+				class="flex cursor-pointer flex-col items-center gap-2"
 			>
 				<span
 					class={cn(
@@ -43,7 +49,22 @@
 						state === "upcoming" && "border-line bg-bg text-dim"
 					)}
 				>
-					{i + 1}
+					{#if completed}
+						<svg
+							class="size-3.5"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="3"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M5 13l4 4L19 7" />
+						</svg>
+					{:else}
+						{i + 1}
+					{/if}
 				</span>
 
 				<span
@@ -56,7 +77,7 @@
 				>
 					{label}
 				</span>
-			</svelte:element>
+			</a>
 		</li>
 	{/each}
 </ol>

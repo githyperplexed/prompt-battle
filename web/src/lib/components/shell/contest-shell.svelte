@@ -13,6 +13,7 @@
 
 	let {
 		current,
+		progress,
 		title,
 		subtitle,
 		videoId,
@@ -20,6 +21,7 @@
 		children
 	}: {
 		current: RenderState;
+		progress: RenderState;
 		title: string;
 		subtitle: string;
 		videoId: string;
@@ -36,7 +38,7 @@
 
 <div class={cn("flex flex-col", loading && "min-h-dvh")}>
 	<div class={`sticky top-0 z-40 ${wrap}`}>
-		<PhaseStepper {current} />
+		<PhaseStepper {current} {progress} />
 	</div>
 
 	<header class={wrap}>

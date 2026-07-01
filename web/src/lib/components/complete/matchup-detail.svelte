@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Card from "$lib/components/ui/card.svelte";
+	import JudgeChip from "$lib/components/ui/judge-chip.svelte";
 	import type { MatchupDetail } from "$lib/types/contest";
 	import { cn } from "$lib/utilities/cn";
-	import { judgeText } from "$lib/utilities/judges";
 
 	let { detail }: { detail: MatchupDetail | null } = $props();
 
@@ -50,7 +50,9 @@
 				<div
 					class="vote-row items-center gap-3.5 rounded-control border border-line bg-bg2 px-3.5 py-3"
 				>
-					<div class={`text-sm font-semibold ${judgeText(vote.index)}`}>{vote.label}</div>
+					<div>
+						<JudgeChip index={vote.index} model={vote.model} />
+					</div>
 					<div class="flex flex-col gap-0.5 text-sm text-mut">
 						<div>A-first → <b class="font-semibold text-tx">{vote.aFirst}</b></div>
 						<div>B-first → <b class="font-semibold text-tx">{vote.bFirst}</b></div>
@@ -78,14 +80,18 @@
 			{#each entrants as entry (entry.name)}
 				{@const won = entry.name === detail.winnerName}
 
-				<div class={cn("rounded-control border bg-bg2 p-3.5", won ? "border-acc/45" : "border-line")}>
+				<div
+					class={cn("rounded-control border bg-bg2 p-3.5", won ? "border-acc/45" : "border-line")}
+				>
 					<div class="mb-2 flex items-center justify-between gap-2">
 						<div class="flex items-baseline gap-2">
 							<span class="font-mono text-xs text-dim">#{entry.seed ?? "–"}</span>
 							<span class="text-sm font-semibold">{entry.name}</span>
 						</div>
 						{#if won}
-							<span class="rounded-chip bg-acc/20 px-2 py-0.5 font-mono text-xs text-acc">Winner</span>
+							<span class="rounded-chip bg-acc/20 px-2 py-0.5 font-mono text-xs text-acc"
+								>Winner</span
+							>
 						{/if}
 					</div>
 					<p class="text-sm leading-relaxed text-mut text-pretty">{entry.text}</p>
@@ -98,7 +104,9 @@
 <style>
 	.vote-row {
 		display: grid;
-		grid-template-columns: 200px 1fr auto;
+		/* Fixed judge-chip column so the A-first/B-first column lines up across all three rows,
+		   regardless of each judge's model-name length. Sized to comfortably fit the longest chip. */
+		grid-template-columns: 14rem 1fr auto;
 	}
 
 	@media (max-width: 767px) {

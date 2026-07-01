@@ -4,10 +4,17 @@
 	import Card from "$lib/components/ui/card.svelte";
 	import type { CompleteData } from "$lib/types/contest";
 
+	import PhaseIntro from "./phase-intro.svelte";
+
 	let { complete }: { complete: CompleteData } = $props();
 </script>
 
 <section class="flex flex-col gap-5 pt-7">
+	<PhaseIntro title="Complete">
+		The contest is settled. The champion, the head-to-head bracket, and the verification record are
+		all final.
+	</PhaseIntro>
+
 	{#if complete.champion}
 		<ChampionCard champion={complete.champion} />
 	{/if}

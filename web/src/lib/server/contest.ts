@@ -8,7 +8,6 @@ import type {
 	SnapshotData,
 	VerificationData
 } from "$lib/types/contest";
-import { judgeLabel } from "$lib/utilities/judges";
 import { aggregateTotals, rankByScore } from "$lib/utilities/ranking";
 
 // Engine constants, mirrored from worker/src/constants.ts.
@@ -259,7 +258,7 @@ const buildMatchupDetail = (
 
 		return {
 			index: i,
-			label: judgeLabel(i),
+			model: modelId,
 			aFirst: aFirst ? nameOf(aFirst.chosenEntryId) : "–",
 			bFirst: bFirst ? nameOf(bFirst.chosenEntryId) : "–",
 			consistent,
@@ -396,4 +395,3 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 
 	return { champion, rounds, details };
 };
-

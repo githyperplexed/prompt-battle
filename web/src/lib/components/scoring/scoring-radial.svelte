@@ -1,11 +1,9 @@
 <script lang="ts">
 	let {
 		pct,
-		done,
-		total,
 		eligible,
 		judges
-	}: { pct: number; done: number; total: number; eligible: number; judges: number } = $props();
+	}: { pct: number; eligible: number; judges: number } = $props();
 
 	const degrees = $derived(((Math.min(100, pct) / 100) * 360).toFixed(1));
 </script>
@@ -23,6 +21,5 @@
 </div>
 
 <div class="font-mono text-sm text-mut">
-	{done.toLocaleString()} / {total.toLocaleString()} scores · {eligible.toLocaleString()} entries × {judges}
-	judges
+	{eligible.toLocaleString()} entries × {judges} judges
 </div>

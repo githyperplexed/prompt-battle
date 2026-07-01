@@ -1,10 +1,11 @@
-import type { RenderState } from "$lib/utilities/phases";
+import type { Phase, RenderState } from "$lib/utilities/phases";
 
 export type ContestMeta = {
 	id: string;
 	title: string;
 	subtitle: string;
 	videoId: string;
+	videoPublishedAt: string;
 	snapshotAt: string;
 	capturedAt: string | null;
 	fingerprint: string | null;
@@ -104,7 +105,7 @@ export type CompleteData = {
 
 export type MatchupVote = {
 	index: number;
-	label: string;
+	model: string;
 	aFirst: string;
 	bFirst: string;
 	consistent: boolean;
@@ -125,7 +126,14 @@ export type MatchupDetail = {
 };
 
 export type ContestPageData = {
+	// The resolved content state: the viewed phase, or `locked`/`upcoming` when its data is gated.
 	state: RenderState;
+	// The viewed step itself (always a real phase), used to drive the stepper highlight independently
+	// of whether that step's content is revealed, locked, or upcoming.
+	view?: Phase;
+	// The real lifecycle phase (independent of the viewed phase), so the stepper can keep completed
+	// phases marked done even while a past or future phase is being viewed.
+	progress?: RenderState;
 	contest: ContestMeta | null;
 	snapshot?: SnapshotData;
 	scoring?: ScoringData;

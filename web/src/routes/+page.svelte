@@ -6,6 +6,7 @@
 	import ScoringPhase from "$lib/components/phases/scoring-phase.svelte";
 	import SnapshotPhase from "$lib/components/phases/snapshot-phase.svelte";
 	import StatusNotice from "$lib/components/phases/status-notice.svelte";
+	import UpcomingPhase from "$lib/components/phases/upcoming-phase.svelte";
 	import ContestShell from "$lib/components/shell/contest-shell.svelte";
 	import Card from "$lib/components/ui/card.svelte";
 
@@ -28,7 +29,8 @@
 	/>
 {:else}
 	<ContestShell
-		current={data.state}
+		current={data.view ?? data.state}
+		progress={data.progress ?? data.state}
 		title={data.contest.title}
 		subtitle={data.contest.subtitle}
 		videoId={data.contest.videoId}
@@ -46,6 +48,8 @@
 			<CompletePhase complete={data.complete} />
 		{:else if data.state === "locked"}
 			<LockedPhase />
+		{:else if data.state === "upcoming"}
+			<UpcomingPhase phase={data.view ?? data.state} />
 		{:else}
 			<section class="pt-7">
 				<Card class="py-9 text-center text-mut">This phase’s view lands in the next pass.</Card>
