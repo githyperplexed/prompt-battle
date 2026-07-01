@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CopyField from "$lib/components/ui/copy-field.svelte";
 	import JudgeChip from "$lib/components/ui/judge-chip.svelte";
 	import type { VerificationData } from "$lib/types/contest";
 
@@ -27,9 +28,7 @@
 	</p>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
-			Panel · 3 models
-		</div>
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">Panel · 3 models</div>
 		<div class="flex flex-wrap gap-2">
 			{#each verification.panel as model, i (model)}
 				<JudgeChip index={i} {model} />
@@ -40,7 +39,7 @@
 	<div class="mt-4">
 		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">Hashes</div>
 		{#each hashes as hash (hash.key)}
-			{@render line(hash.key, hash.value)}
+			<CopyField label={hash.key} value={hash.value} />
 		{/each}
 	</div>
 
@@ -54,9 +53,7 @@
 	</div>
 
 	<div class="mt-4">
-		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">
-			Bracket fingerprint
-		</div>
-		{@render line("fingerprint", verification.fingerprint ?? "–")}
+		<div class="mb-2 font-mono text-xs tracking-widest text-dim uppercase">Bracket fingerprint</div>
+		<CopyField label="fingerprint" value={verification.fingerprint ?? "–"} />
 	</div>
 </div>

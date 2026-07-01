@@ -35,7 +35,7 @@
 		>
 			<span class="flex-none">fingerprint ·</span>
 			<span class="min-w-0 truncate">{fingerprint}</span>
-			<span class="flex-none text-ok">{copied ? "copied" : ""}</span>
+			<span class="flex-none text-acc">{copied ? "copied" : ""}</span>
 		</button>
 	{/if}
 </div>
