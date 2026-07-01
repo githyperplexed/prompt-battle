@@ -5,7 +5,11 @@
 	import { hasTextSelection } from "$lib/utilities/dom";
 	import { dqLabel } from "$lib/utilities/labels";
 
-	let { data }: { data: EntryListData } = $props();
+	let {
+		data,
+		dqReason = null,
+		onClearDq
+	}: { data: EntryListData; dqReason?: string | null; onClearDq?: () => void } = $props();
 
 	const PREVIEW = 100;
 
@@ -23,11 +27,14 @@
 
 	const filtered = $derived.by(() => {
 		const q = applied.trim().toLowerCase();
-		if (!q) return data.entries;
 
-		return data.entries.filter(
-			(e) => e.author.toLowerCase().includes(q) || e.channelId.toLowerCase().includes(q)
-		);
+		return data.entries.filter((e) => {
+			const matchesDq = !dqReason || e.dqReason === dqReason;
+			const matchesQuery =
+				!q || e.author.toLowerCase().includes(q) || e.channelId.toLowerCase().includes(q);
+
+			return matchesDq && matchesQuery;
+		});
 	});
 
 	const toggle = (id: string) => {
@@ -48,15 +55,29 @@
 		</span>
 	</div>
 
-	<input
-		class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-acc"
-		placeholder="Filter by author or channel id…"
-		bind:value={query}
-	/>
+	<div class="flex flex-col gap-2">
+		<input
+			class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-acc"
+			placeholder="Filter by author or channel id…"
+			bind:value={query}
+		/>
+		{#if dqReason}
+			<div class="flex items-center justify-between gap-3 text-sm text-mut">
+				<span>
+					Showing <span class="font-medium text-tx">{dqLabel(dqReason)}</span>
+				</span>
+				<button type="button" class="text-dim hover:underline" onclick={() => onClearDq?.()}>
+					Clear
+				</button>
+			</div>
+		{/if}
+	</div>
 
 	<div class="overflow-hidden rounded-card border border-line bg-card">
 		{#if filtered.length === 0}
-			<div class="py-9 text-center text-sm text-dim">No entries match “{applied}”.</div>
+			<div class="py-9 text-center text-sm text-dim">
+				{dqReason ? `No entries match ${dqLabel(dqReason)}.` : `No entries match “${applied}”.`}
+			</div>
 		{:else}
 			{#each filtered as e (e.id)}
 				{@const long = !e.redacted && e.text.length > PREVIEW}
@@ -71,7 +92,9 @@
 				>
 					<div class="flex items-baseline justify-between gap-3">
 						<span class="min-w-0 truncate font-medium">{e.author}</span>
-						<span class="flex-none font-mono text-xs text-dim"><LocalTime iso={e.submittedAt} /></span>
+						<span class="flex-none font-mono text-xs text-dim"
+							><LocalTime iso={e.submittedAt} /></span
+						>
 					</div>
 					{#if e.dqReason}
 						<div>

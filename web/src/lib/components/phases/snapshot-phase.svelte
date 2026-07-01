@@ -13,16 +13,18 @@
 		snapshot,
 		entries
 	}: { contest: ContestMeta; snapshot: SnapshotData; entries: EntryListData } = $props();
+
+	let selectedDqReason = $state<string | null>(null);
 </script>
 
 <section class="flex flex-col gap-5 pt-7">
 	<PhaseIntro title="Snapshot">
 		{#if snapshot.eligible === 0}
-			The field froze on <LocalTime iso={contest.capturedAt} /> with no eligible entries, so nothing
-			advances to judging.
+			The field froze on <LocalTime iso={contest.capturedAt} /> with no eligible entries, so nothing advances
+			to judging.
 		{:else}
-			The snapshot is the entry field frozen on <LocalTime iso={contest.capturedAt} /> and screened
-			for eligibility. Only these entries advance to judging.
+			The snapshot is the entry field frozen on <LocalTime iso={contest.capturedAt} /> and screened for
+			eligibility. Only these entries advance to judging.
 		{/if}
 	</PhaseIntro>
 
@@ -38,7 +40,15 @@
 			advances to judging.
 		</Card>
 	{:else}
-		<DqBreakdown dq={snapshot.dq} />
-		<EntryList data={entries} />
+		<DqBreakdown
+			dq={snapshot.dq}
+			selectedReason={selectedDqReason}
+			onSelect={(reason) => (selectedDqReason = selectedDqReason === reason ? null : reason)}
+		/>
+		<EntryList
+			data={entries}
+			dqReason={selectedDqReason}
+			onClearDq={() => (selectedDqReason = null)}
+		/>
 	{/if}
 </section>

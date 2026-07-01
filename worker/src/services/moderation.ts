@@ -72,7 +72,7 @@ const moderateBatch = async (texts: string[], apiKey: string): Promise<boolean[]
 // request count down.
 export const flagViolations = async (texts: string[]): Promise<boolean[]> => {
 	const apiKey = getApiKey();
-	const limiter = new Bottleneck({ maxConcurrent: 1, minTime: 250 });
+	const limiter = new Bottleneck({ maxConcurrent: 1, minTime: 1000 });
 	const flags: boolean[] = [];
 
 	try {
