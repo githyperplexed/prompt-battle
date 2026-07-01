@@ -1,6 +1,6 @@
 import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { nanoid } from "nanoid";
 
+import { newId } from "../id";
 import { entry } from "./entry";
 import { matchup } from "./matchup";
 
@@ -11,7 +11,7 @@ export const comparison = pgTable(
 	{
 		id: text()
 			.primaryKey()
-			.$defaultFn(() => nanoid()),
+			.$defaultFn(() => newId()),
 		matchupId: text()
 			.notNull()
 			.references(() => matchup.id, { onDelete: "cascade" }),

@@ -9,8 +9,8 @@ import {
 	unique,
 	uniqueIndex
 } from "drizzle-orm/pg-core";
-import { nanoid } from "nanoid";
 
+import { newId } from "../id";
 import { contest } from "./contest";
 
 export const entryStatus = pgEnum("entry_status", ["eligible", "disqualified"]);
@@ -32,7 +32,7 @@ export const entry = pgTable(
 	{
 		id: text()
 			.primaryKey()
-			.$defaultFn(() => nanoid()),
+			.$defaultFn(() => newId()),
 		contestId: text()
 			.notNull()
 			.references(() => contest.id, { onDelete: "cascade" }),

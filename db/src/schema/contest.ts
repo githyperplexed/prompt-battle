@@ -1,5 +1,6 @@
 import { jsonb, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { nanoid } from "nanoid";
+
+import { newId } from "../id";
 
 export const contestStatus = pgEnum("contest_status", [
 	"draft",
@@ -13,7 +14,7 @@ export const contestStatus = pgEnum("contest_status", [
 export const contest = pgTable("contest", {
 	id: text()
 		.primaryKey()
-		.$defaultFn(() => nanoid()),
+		.$defaultFn(() => newId()),
 	videoId: text().notNull(),
 	videoPublishedAt: timestamp({ withTimezone: true }).notNull(),
 	snapshotAt: timestamp({ withTimezone: true }).notNull(),

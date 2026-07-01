@@ -7,8 +7,8 @@ import {
 	timestamp,
 	uniqueIndex
 } from "drizzle-orm/pg-core";
-import { nanoid } from "nanoid";
 
+import { newId } from "../id";
 import { contest } from "./contest";
 import { entry } from "./entry";
 
@@ -19,7 +19,7 @@ export const matchup = pgTable(
 	{
 		id: text()
 			.primaryKey()
-			.$defaultFn(() => nanoid()),
+			.$defaultFn(() => newId()),
 		contestId: text()
 			.notNull()
 			.references(() => contest.id, { onDelete: "cascade" }),
