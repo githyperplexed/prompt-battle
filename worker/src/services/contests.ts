@@ -2,6 +2,7 @@ import { contest, db, entry, eq, matchup, score, sql } from "@prompt-battle/db";
 
 import { canResetTo, type ResetTarget } from "$src/utilities/contest-status";
 import { withContestLock } from "$src/services/locks";
+import { loadKeywordSecret } from "$src/services/secrets";
 
 type CreateContestInput = {
 	videoId: string;
@@ -118,7 +119,7 @@ export const publishContest = async (contestId: string, at: Date | null) =>
 
 		const found = await tx.query.contest.findFirst({
 			where: (c, { eq }) => eq(c.id, contestId),
-			columns: { id: true, status: true }
+			columns: { id: true, status: true, videoId: true, config: true }
 		});
 
 		if (!found) throw new Error(`No contest with id ${contestId}`);
@@ -127,7 +128,24 @@ export const publishContest = async (contestId: string, at: Date | null) =>
 			return { skipped: true as const, status: found.status };
 		}
 
-		await tx.update(contest).set({ resultsPublishedAt: at }).where(eq(contest.id, contestId));
+		// Publishing reveals the keywords + salt into the contest config so the committed hash can be
+		// re-derived by anyone; unpublishing re-embargoes them. The plaintext otherwise lives only in
+		// the local secrets file.
+		const base = (found.config ?? {}) as Record<string, unknown>;
+		let config: Record<string, unknown>;
+
+		if (at !== null) {
+			const secret = loadKeywordSecret(found.videoId);
+			config = { ...base, revealed: { keywords: secret.keywords, salt: secret.salt } };
+		} else {
+			config = { ...base };
+			delete config.revealed;
+		}
+
+		await tx
+			.update(contest)
+			.set({ resultsPublishedAt: at, config })
+			.where(eq(contest.id, contestId));
 
 		return { skipped: false as const, status: found.status, publishedAt: at };
 	});

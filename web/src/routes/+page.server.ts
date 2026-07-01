@@ -90,7 +90,7 @@ export const load: PageServerLoad = async ({ url }): Promise<ContestPageData> =>
 		]);
 	}
 
-	if (state === "scored") data.leaderboard = await loadLeaderboard(contest.id);
+	if (state === "scored") data.leaderboard = await loadLeaderboard(contest.id, panel);
 
 	if (state === "complete") data.complete = await loadComplete(contest.id);
 

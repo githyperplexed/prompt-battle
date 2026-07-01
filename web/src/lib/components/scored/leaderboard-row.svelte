@@ -3,6 +3,7 @@
 	import type { LeaderboardRow } from "$lib/types/contest";
 	import { cn } from "$lib/utilities/cn";
 	import { hasTextSelection } from "$lib/utilities/dom";
+	import { judgeText } from "$lib/utilities/judges";
 
 	let {
 		row,
@@ -47,6 +48,16 @@
 				</p>
 				{#if long}
 					<span class="font-mono text-xs text-mut">{expanded ? "Show less" : "Show more"}</span>
+				{/if}
+				{#if row.perModel.length > 0}
+					<div class="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs">
+						{#each row.perModel as pm, i (pm.model)}
+							<span>
+								<span class={judgeText(i)}>{pm.model}</span>
+								<span class="text-mut tabular-nums">{pm.total}</span>
+							</span>
+						{/each}
+					</div>
 				{/if}
 			</div>
 			<div class="text-right">

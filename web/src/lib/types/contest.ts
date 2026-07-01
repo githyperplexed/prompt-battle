@@ -57,6 +57,7 @@ export type LeaderboardRow = {
 	submittedAt: string;
 	text: string;
 	score: number;
+	perModel: { model: string; total: number }[];
 	advancing: boolean;
 };
 
@@ -93,6 +94,10 @@ export type VerificationData = {
 	scorePromptHash: string;
 	comparePromptHash: string;
 	keywordHash: string;
+	// The plaintext keywords + salt, revealed into the config at publish so the hash can be
+	// re-derived. Null until results are published (or after re-embargo).
+	revealedKeywords: string[] | null;
+	revealedSalt: string | null;
 	fingerprint: string | null;
 	judgeSettings: { key: string; value: string }[];
 };

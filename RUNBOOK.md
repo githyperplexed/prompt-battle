@@ -214,6 +214,10 @@ bun run worker publish --contest <id> --at <iso>      # publish at a specific ti
 bun run worker publish --contest <id> --unpublish     # re-embargo
 ```
 
+Publishing also reveals the keywords + salt into the contest config (read from the local
+`secrets/<videoId>.json`, so that file must be present when you publish) — this is what lets anyone
+re-derive the committed keyword hash, and it surfaces on `/rules`. `--unpublish` strips them again.
+
 Still to build: export the full audit bundle for the public record —
 
 - contest config (`panel`, prompt hashes/text, keyword hash, judge request settings);

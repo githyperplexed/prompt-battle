@@ -29,6 +29,7 @@ const ROUND_LABELS = [
 type ContestConfigShape = {
 	panel?: { id: string }[];
 	keywordHash?: string;
+	revealed?: { keywords: string[]; salt: string };
 	prompts?: { score?: { hash?: string }; compare?: { hash?: string } };
 	judge?: { requestSettings?: { maxRetries?: number; sampling?: string } };
 };
@@ -47,6 +48,8 @@ const buildVerification = (
 		scorePromptHash: config?.prompts?.score?.hash ?? "–",
 		comparePromptHash: config?.prompts?.compare?.hash ?? "–",
 		keywordHash: config?.keywordHash ?? "–",
+		revealedKeywords: config?.revealed?.keywords ?? null,
+		revealedSalt: config?.revealed?.salt ?? null,
 		fingerprint,
 		judgeSettings: [
 			{ key: "max retries", value: String(settings?.maxRetries ?? "–") },
@@ -178,23 +181,31 @@ export const loadEntryList = async (
 
 // Full ranked leaderboard. Only called from the page load's `scored` branch, which the embargo
 // logic already gates to post-reveal (or the dev ?phase= override), so scores never load early.
-export const loadLeaderboard = async (contestId: string): Promise<LeaderboardData> => {
+export const loadLeaderboard = async (
+	contestId: string,
+	panel: string[]
+): Promise<LeaderboardData> => {
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
 		columns: { id: true, authorDisplayName: true, channelId: true, publishedAt: true, text: true }
 	});
 
 	const scoreRows = await db
-		.select({ entryId: score.entryId, total: score.total })
+		.select({ entryId: score.entryId, modelId: score.modelId, total: score.total })
 		.from(score)
 		.where(eq(score.contestId, contestId));
 
 	const totalsByEntry = new Map<string, number[]>();
+	const perModelByEntry = new Map<string, Map<string, number>>();
 
 	for (const row of scoreRows) {
 		const list = totalsByEntry.get(row.entryId) ?? [];
 		list.push(row.total);
 		totalsByEntry.set(row.entryId, list);
+
+		const byModel = perModelByEntry.get(row.entryId) ?? new Map<string, number>();
+		byModel.set(row.modelId, row.total);
+		perModelByEntry.set(row.entryId, byModel);
 	}
 
 	// `publishedAt` doubles as the rank tiebreaker (earlier submission wins) and the displayed time.
@@ -210,6 +221,7 @@ export const loadLeaderboard = async (contestId: string): Promise<LeaderboardDat
 				channelId: e.channelId,
 				publishedAt: e.publishedAt,
 				text: e.text,
+				byModel: perModelByEntry.get(e.id) ?? new Map<string, number>(),
 				...aggregateTotals(totals)
 			}
 		];
@@ -222,6 +234,12 @@ export const loadLeaderboard = async (contestId: string): Promise<LeaderboardDat
 		submittedAt: e.publishedAt.toISOString(),
 		text: e.text,
 		score: e.absoluteScore,
+		// Per-model totals in panel order, so the display colors align with the judge index.
+		perModel: panel.flatMap((model) => {
+			const total = e.byModel.get(model);
+
+			return total === undefined ? [] : [{ model, total }];
+		}),
 		rank: i + 1,
 		seed: i < BRACKET_SIZE ? i + 1 : null,
 		advancing: i < BRACKET_SIZE

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import VerificationPanel from "$lib/components/complete/verification-panel.svelte";
+	import HowToVerify from "$lib/components/complete/how-to-verify.svelte";
 	import Card from "$lib/components/ui/card.svelte";
 
 	import type { PageData } from "./$types";
@@ -21,10 +21,10 @@
 	<a class="text-sm text-mut hover:text-tx" href="/">← Back to the contest</a>
 
 	<h1 class="mt-5 mb-2 text-3xl font-bold">Rules &amp; verification</h1>
-	<p class="m-0 mb-6 max-w-2xl text-base leading-relaxed text-mut">
+	<p class="m-0 mb-6 text-base leading-relaxed text-mut">
 		This contest runs on an open-source engine. The rules, the judging code, and every recorded
-		decision are public. The judging inputs are committed as hashes before any entry is judged,
-		so anyone can confirm the contest used the published rules and the exact frozen inputs.
+		decision are public. The judging inputs are committed as hashes before any entry is judged, so
+		anyone can confirm the contest used the published rules and the exact frozen inputs.
 	</p>
 
 	<div class="mb-7 flex flex-wrap gap-2.5">
@@ -33,16 +33,7 @@
 	</div>
 
 	{#if data.verification}
-		<p class="m-0 mb-3.5 max-w-2xl text-sm leading-relaxed text-mut">
-			These commitments were frozen when the contest was created. The
-			<b class="font-semibold text-tx">keyword set</b> is a salted hash of the hidden keywords (the
-			words stay secret until the reveal, then anyone can re-hash them to check). The
-			<b class="font-semibold text-tx">prompt</b> hashes pin the exact judge instructions, and the
-			<b class="font-semibold text-tx">bracket fingerprint</b> pins the seeded field that produced the
-			winner.
-		</p>
-
-		<VerificationPanel verification={data.verification} />
+		<HowToVerify verification={data.verification} />
 	{:else}
 		<Card class="text-center text-mut">No active contest to verify yet.</Card>
 	{/if}
