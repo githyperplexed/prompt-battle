@@ -83,7 +83,12 @@ export type BracketMatchup = {
 	winnerSide: "a" | "b" | null;
 };
 
-export type BracketRound = { round: number; label: string; matchups: BracketMatchup[] };
+export type BracketRound = {
+	round: number;
+	label: string;
+	short: string;
+	matchups: BracketMatchup[];
+};
 
 export type Champion = {
 	author: string;
@@ -117,6 +122,9 @@ export type VerificationData = {
 
 export type CompleteData = {
 	champion: Champion;
+	// Number of seeded entrants that actually entered the bracket (≤ BRACKET_SIZE). Drives the
+	// heading so a sub-64 field isn't described as "Top 64".
+	entrants: number;
 	rounds: BracketRound[];
 	details: Record<string, MatchupDetail>;
 };

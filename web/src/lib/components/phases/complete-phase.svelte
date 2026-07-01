@@ -20,7 +20,7 @@
 	{/if}
 
 	{#if complete.rounds.length > 0}
-		<Bracket rounds={complete.rounds} details={complete.details} />
+		<Bracket rounds={complete.rounds} details={complete.details} entrants={complete.entrants} />
 	{:else}
 		<Card class="py-9 text-center text-mut">Bracket results are not available yet.</Card>
 	{/if}

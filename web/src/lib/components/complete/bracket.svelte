@@ -8,13 +8,24 @@
 		MatchupDetail as MatchupDetailData
 	} from "$lib/types/contest";
 
-	let { rounds, details }: { rounds: BracketRound[]; details: Record<string, MatchupDetailData> } =
-		$props();
-
-	const navLabels = ["R64", "R32", "R16", "QF", "SF", "F"];
+	let {
+		rounds,
+		details,
+		entrants
+	}: {
+		rounds: BracketRound[];
+		details: Record<string, MatchupDetailData>;
+		entrants: number;
+	} = $props();
 
 	let selectedId = $state<string | null>(null);
 	let mobileRound = $state<number | null>(null);
+
+	// Byes are drawn as nodes but carry no detail; selecting one would blank the detail panel, so
+	// only nodes backed by a real matchup (i.e. present in `details`) are selectable.
+	const select = (id: string) => {
+		if (details[id]) selectedId = id;
+	};
 
 	const activeId = $derived(selectedId ?? rounds.at(-1)?.matchups[0]?.id ?? null);
 	const activeDetail = $derived(activeId ? (details[activeId] ?? null) : null);
@@ -194,7 +205,7 @@
 </script>
 
 <h3 class="m-0 text-lg font-semibold">
-	The bracket <span class="text-sm text-dim">· Top 64</span>
+	The bracket <span class="text-sm text-dim">· {entrants} {entrants === 1 ? "entrant" : "entrants"}</span>
 </h3>
 
 <!-- Mobile: round selector + a single round's matchups as a list. -->
@@ -210,7 +221,7 @@
 			)}
 			onclick={() => (mobileRound = round.round)}
 		>
-			{navLabels[round.round - 1] ?? `R${round.round}`}
+			{round.short}
 		</button>
 	{/each}
 </div>
@@ -220,11 +231,7 @@
 		{rounds.find((r) => r.round === activeRound)?.label}
 	</div>
 	{#each mobileMatchups as matchup (matchup.id)}
-		<BracketNode
-			{matchup}
-			selected={selectedId === matchup.id}
-			onSelect={() => (selectedId = matchup.id)}
-		/>
+		<BracketNode {matchup} selected={selectedId === matchup.id} onSelect={() => select(matchup.id)} />
 	{/each}
 </div>
 
@@ -270,7 +277,7 @@
 						<BracketNode
 							{matchup}
 							selected={activeId === matchup.id}
-							onSelect={() => (selectedId = matchup.id)}
+							onSelect={() => select(matchup.id)}
 						/>
 					{/each}
 				</div>

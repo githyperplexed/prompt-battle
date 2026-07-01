@@ -10,6 +10,9 @@ import {
 	similarity
 } from "$lib/server/database";
 import type {
+	BracketEntrant,
+	BracketMatchup,
+	BracketRound,
 	CompleteData,
 	EntryListData,
 	LeaderboardData,
@@ -18,6 +21,7 @@ import type {
 	SnapshotData,
 	VerificationData
 } from "$lib/types/contest";
+import { nextPowerOfTwo, seedOrder } from "$lib/utilities/bracket";
 import { aggregateTotals, rankByScore } from "$lib/utilities/ranking";
 
 // Engine constants, mirrored from worker/src/constants.ts.
@@ -27,14 +31,19 @@ const BRACKET_SIZE = 64;
 // shows a "first N of M" note; the cap keeps the payload and DOM bounded.
 export const ENTRY_LIST_CAP = 5000;
 
-const ROUND_LABELS = [
-	"Round of 64",
-	"Round of 32",
-	"Round of 16",
-	"Quarterfinals",
-	"Semifinals",
-	"Final"
-];
+// Rounds are labeled by distance from the final, not by absolute number, so a field smaller than
+// BRACKET_SIZE starts at the right round. A 12-entrant field runs a 16-slot bracket with byes:
+// `totalRounds` is 4, so round 1 is the "Round of 16" (not "Round of 64"). `size` is the number of
+// slots contested entering `round` (2 at the final).
+const roundLabel = (round: number, totalRounds: number): { label: string; short: string } => {
+	const size = 2 ** (totalRounds - round + 1);
+
+	if (size <= 2) return { label: "Final", short: "F" };
+	if (size === 4) return { label: "Semifinals", short: "SF" };
+	if (size === 8) return { label: "Quarterfinals", short: "QF" };
+
+	return { label: `Round of ${size}`, short: `R${size}` };
+};
 
 type ContestConfigShape = {
 	panel?: { id: string }[];
@@ -323,7 +332,8 @@ const buildMatchupDetail = (
 	m: MatchupRow,
 	byId: Map<string, MatchupEntry>,
 	comps: MatchupComparison[],
-	panel: string[]
+	panel: string[],
+	totalRounds: number
 ): MatchupDetail => {
 	const a = byId.get(m.entryAId) ?? { seed: null, name: "–", text: "" };
 	const b = byId.get(m.entryBId) ?? { seed: null, name: "–", text: "" };
@@ -363,7 +373,7 @@ const buildMatchupDetail = (
 			: `Majority ${Math.max(tallyA, tallyB)}–${Math.min(tallyA, tallyB)} for ${winnerName}.${tail}`;
 
 	return {
-		roundLabel: ROUND_LABELS[m.round - 1] ?? `Round ${m.round}`,
+		roundLabel: roundLabel(m.round, totalRounds).label,
 		aName: a.name,
 		aSeed: a.seed,
 		aText: a.text,
@@ -440,36 +450,86 @@ export const loadComplete = async (contestId: string): Promise<CompleteData> => 
 		compsByMatchup.set(c.matchupId, list);
 	}
 
+	// The seeded field runs a nextPowerOfTwo(field)-slot bracket, so its depth (and every round's
+	// label) is fixed by the field size, independent of how many byes trimmed the first round.
+	const bracketSize = nextPowerOfTwo(seeded.length);
+	const totalRounds = bracketSize > 1 ? Math.log2(bracketSize) : 0;
+
 	const details: Record<string, MatchupDetail> = {};
 	for (const m of matchups) {
-		details[m.id] = buildMatchupDetail(m, byId, compsByMatchup.get(m.id) ?? [], panel);
+		details[m.id] = buildMatchupDetail(m, byId, compsByMatchup.get(m.id) ?? [], panel, totalRounds);
 	}
 
-	const nodeOf = (id: string) => {
+	const nodeOf = (id: string | null): BracketEntrant => {
+		if (!id) return null;
+
 		const e = byId.get(id);
 		return e ? { seed: e.seed, name: e.name } : null;
 	};
 
-	const rounds = ROUND_LABELS.map((label, i) => ({
-		round: i + 1,
-		label,
-		matchups: matchups
-			.filter((m) => m.round === i + 1)
-			.sort((a, b) => a.slot - b.slot)
-			.map((m) => ({
-				id: m.id,
-				round: m.round,
-				slot: m.slot,
-				a: nodeOf(m.entryAId),
-				b: nodeOf(m.entryBId),
-				winnerSide:
-					m.winnerId === m.entryAId
-						? ("a" as const)
-						: m.winnerId === m.entryBId
-							? ("b" as const)
-							: null
-			}))
-	})).filter((r) => r.matchups.length > 0);
+	const idBySeed = new Map<number, string>();
+	for (const e of seeded) if (e.seed != null) idBySeed.set(e.seed, e.id);
 
-	return { champion, rounds, details };
+	const matchupByRoundSlot = new Map<string, (typeof matchups)[number]>();
+	for (const m of matchups) matchupByRoundSlot.set(`${m.round}:${m.slot}`, m);
+
+	// Reconstruct the whole seeded bracket — including the bye slots the worker never persisted as
+	// matchup rows — so the client always receives a complete binary tree (each round exactly half
+	// the previous). This keeps the renderer's parent→child (2k / 2k+1) connector math valid; a
+	// smaller-than-64 field just shows byes (a lone seed advancing) in the first round. Mirrors the
+	// worker's seedOrder/byes in worker/src/services/bracket.ts.
+	let slots: (string | null)[] =
+		bracketSize > 1 ? seedOrder(bracketSize).map((seed) => idBySeed.get(seed) ?? null) : [];
+
+	const rounds: BracketRound[] = [];
+	let round = 1;
+
+	while (slots.length > 1) {
+		const { label, short } = roundLabel(round, totalRounds);
+		const matchupNodes: BracketMatchup[] = [];
+		const winners: (string | null)[] = [];
+
+		for (let slot = 0; slot * 2 < slots.length; slot += 1) {
+			const aId = slots[slot * 2] ?? null;
+			const bId = slots[slot * 2 + 1] ?? null;
+
+			if (aId && bId) {
+				// A contested matchup: use the stored row (entryA is the higher seed by worker
+				// convention). If the row is somehow missing (partial bracket), fall back to seed order.
+				const m = matchupByRoundSlot.get(`${round}:${slot}`);
+				const a = m?.entryAId ?? aId;
+				const b = m?.entryBId ?? bId;
+				const winnerId = m?.winnerId ?? null;
+
+				matchupNodes.push({
+					id: m?.id ?? `r${round}-s${slot}`,
+					round,
+					slot,
+					a: nodeOf(a),
+					b: nodeOf(b),
+					winnerSide: winnerId === a ? "a" : winnerId === b ? "b" : null
+				});
+				winners.push(winnerId);
+			} else {
+				// A bye: the present seed advances unopposed, with no matchup row or comparisons.
+				const present = aId ?? bId;
+
+				matchupNodes.push({
+					id: `bye-r${round}-s${slot}`,
+					round,
+					slot,
+					a: nodeOf(present),
+					b: null,
+					winnerSide: present ? "a" : null
+				});
+				winners.push(present);
+			}
+		}
+
+		rounds.push({ round, label, short, matchups: matchupNodes });
+		slots = winners;
+		round += 1;
+	}
+
+	return { champion, entrants: seeded.length, rounds, details };
 };
