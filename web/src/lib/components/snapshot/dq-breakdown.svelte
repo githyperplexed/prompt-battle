@@ -24,7 +24,7 @@
 		<button
 			type="button"
 			class={cn(
-				"dq-row mb-2.5 w-full items-center gap-3 rounded-control bg-card2/60 px-3 py-2.5 text-left transition-colors hover:bg-card2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acc",
+				"dq-row mb-2.5 w-full items-center gap-3 rounded-control bg-card2/60 px-3 py-2.5 text-left transition-colors hover:bg-card2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tx",
 				selectedReason === d.reason && "bg-bad/10"
 			)}
 			onclick={() => onSelect?.(d.reason)}

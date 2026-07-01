@@ -33,13 +33,13 @@
 
 		<li class="relative flex flex-1 flex-col items-center">
 			{#if i > 0}
-				<span class="absolute top-3 -left-1/2 h-0.5 w-full bg-line"></span>
+				<span class="absolute top-5 -left-1/2 h-0.5 w-full bg-line"></span>
 			{/if}
 
 			<a
 				href={phaseLink(i)}
 				data-sveltekit-noscroll
-				class="flex cursor-pointer flex-col items-center gap-2"
+				class="relative z-10 flex w-14 cursor-pointer flex-col items-center gap-2 rounded-control py-1.5 outline-none transition-colors hover:bg-card2 focus-visible:bg-card2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-tx md:w-24"
 			>
 				<span
 					class={cn(

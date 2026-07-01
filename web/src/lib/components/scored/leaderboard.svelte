@@ -34,7 +34,7 @@
 	<h3 class="m-0 text-lg font-semibold">Leaderboard</h3>
 
 	<input
-		class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-acc"
+		class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-tx"
 		placeholder="Find your entry by author or channel id…"
 		bind:value={query}
 	/>

@@ -57,7 +57,7 @@
 
 	<div class="flex flex-col gap-2">
 		<input
-			class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-acc"
+			class="w-full rounded-control border border-line bg-bg2 px-3.5 py-2.5 text-sm text-tx outline-none focus:border-tx"
 			placeholder="Filter by author or channel id…"
 			bind:value={query}
 		/>
@@ -85,7 +85,7 @@
 				<button
 					type="button"
 					class={cn(
-						"entry flex w-full cursor-text flex-col gap-1 border-t border-line px-5 py-3 text-left transition-colors select-text first:border-t-0 hover:bg-card2",
+						"entry flex w-full cursor-text flex-col gap-1 border-t border-line px-5 py-3 text-left transition-colors outline-none select-text first:rounded-t-card first:border-t-0 last:rounded-b-card hover:bg-card2 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tx",
 						long && "cursor-pointer"
 					)}
 					onclick={() => long && toggle(e.id)}

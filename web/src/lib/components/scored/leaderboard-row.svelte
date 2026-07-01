@@ -27,12 +27,15 @@
 	};
 </script>
 
-<div class="lb-entry border-t border-line first:border-t-0">
+<div class="lb-entry group border-t border-line first:border-t-0">
 	<button
 		type="button"
 		class={cn(
-			"w-full cursor-text text-left transition-colors select-text hover:bg-card2",
-			long && "cursor-pointer"
+			"w-full cursor-text text-left transition-colors outline-none select-text hover:bg-card2 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tx",
+			long && "cursor-pointer",
+			// The cut-line banner renders below this row at the cut rank, so the button only owns the
+			// container's bottom corners when it isn't the cut row.
+			row.rank !== cutRank && "group-last:rounded-b-card"
 		)}
 		onclick={handleClick}
 	>
