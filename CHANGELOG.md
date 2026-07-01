@@ -214,6 +214,32 @@ connectors and a lazy per-matchup vote panel. Files split by kind (`types/`, `ut
 server `services/`, kebab-case components); a dev-only `?phase=` override (clickable from the
 stepper) previews any phase.
 
+## Phase 18 — Web UI overhaul
+
+A broad redesign and data-flow rework of the `web` app after the first pass:
+
+- **Neutral dark theme.** Replaced the indigo/purple surface palette with a true-neutral dark ramp
+  (the gold prize accent, ambient glow, and per-judge colors stay), and swapped the ad-hoc arbitrary
+  Tailwind classes (`text-[13px]`, `z-[1]`, `color-mix(...)` colors, and the like) for standard
+  tokens, opacity modifiers, `ring`/theme-token utilities, and a few scoped component styles.
+- **Everything loads through the page server load.** Every list and bracket dataset now comes back
+  with the initial page (score-free entry lists for snapshot/scoring, the full ranked leaderboard,
+  and all preloaded matchup details), so nothing fetches separately. This let the ad-hoc `/api/*`
+  endpoints (entry search/detail, matchup detail) and the standalone search components be deleted,
+  and it moved embargo gating entirely into the load, so scores and bracket outcomes can no longer
+  be pulled ahead of the reveal from any endpoint.
+- **Full, searchable fields.** Snapshot and scoring render the whole field as a single searchable,
+  `content-visibility`-virtualized list (the snapshot view badges disqualifications and withholds
+  `tos` bodies from the payload). The scored leaderboard collapsed its tabs, pagination, and
+  score-matrix drill-down into one searchable list that folds seed into the rank column.
+- **Bracket + matchup rework.** Two-sided bracket that meets at the center final, drag-to-pan with a
+  hidden scrollbar, and round labels pinned to the top of the viewport (synced to horizontal pan).
+  The per-matchup votes and prompts collapsed into one card (round header, judge results, verdict,
+  highlighted winner), and the verification record moved off the results page to `/rules` only.
+- **Navigation & polish.** A loading skeleton fills the content area during navigation, a divider
+  sits above the page content, the scrollbar gutter is always reserved so pages don't shift, times
+  render in the viewer's local timezone, and the footer fingerprint is a copyable control.
+
 ---
 
 ## Notable cross-cutting decisions
