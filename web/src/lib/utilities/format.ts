@@ -9,9 +9,9 @@ export const formatUtc = (iso: string | null): string => {
 		timeZone: "UTC"
 	});
 	const time = date.toLocaleTimeString("en-US", {
-		hour: "2-digit",
+		hour: "numeric",
 		minute: "2-digit",
-		hour12: false,
+		hour12: true,
 		timeZone: "UTC"
 	});
 
@@ -25,7 +25,7 @@ export const formatLocal = (iso: string | null): string => {
 
 	const date = new Date(iso);
 	const day = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-	const time = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+	const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 
 	return `${day} · ${time}`;
 };

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatLocal, formatUtc } from "$lib/utilities/format";
 
-	let { iso }: { iso: string } = $props();
+	let { iso }: { iso: string | null } = $props();
 
 	// Render UTC on the server and during hydration (deterministic), then switch to the viewer's
 	// local time once mounted — the server can't know the client timezone, so this avoids a mismatch.
