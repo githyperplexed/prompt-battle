@@ -240,6 +240,26 @@ A broad redesign and data-flow rework of the `web` app after the first pass:
   sits above the page content, the scrollbar gutter is always reserved so pages don't shift, times
   render in the viewer's local timezone, and the footer fingerprint is a copyable control.
 
+## Phase 19 — Public phase navigation & selective embargo
+
+Follow-on refinements to the web app after the overhaul:
+
+- **Public phase navigation.** The stepper's `?phase=` selector is now public rather than dev-only —
+  anyone can jump ahead or behind to any phase. What each phase _reveals_ still comes entirely from
+  the server load, gated on the real contest status: a phase the contest hasn't reached renders a
+  "hasn't happened yet" placeholder and loads no data, so browsing never surfaces anything early. A
+  dev-only `?peek=true` bypasses the gate to inspect real data for any phase.
+- **The ranked leaderboard goes public before the reveal.** Split the embargo so only the bracket,
+  champion, and verification record (`complete`) wait for `publish`; the ranked leaderboard
+  (`scored`) is public the moment scoring finishes. An unpublished `complete` contest lands on the
+  public Ranked view with the bracket shown as "locked until the reveal."
+- **Standardized phase headers & polish.** Every phase leads with a shared title + description block
+  (with its "Phase N" marker); the stepper marks completed phases with a checkmark (including the
+  terminal Complete once results publish); a dedicated lock-icon "entries closed / snapshot pending"
+  panel replaces the countdown once entries close; times render in 12-hour local format; the
+  entry-window length is derived from the real publish→snapshot gap; matchup judge labels reuse the
+  shared judge chip; and the `/rules` hash fields are copyable like the footer fingerprint.
+
 ---
 
 ## Notable cross-cutting decisions

@@ -179,9 +179,10 @@ rows. There is no in-place config edit by design.
 
 ### 5. Publish results ✅
 
-The web UI reads contest state live, but `scored` and `complete` are **embargoed** until results
-are explicitly published — the public site shows a "results locked until the reveal" screen so
-finishing the bracket privately doesn't spoil the reveal video. Lift the embargo when the video
+The web UI reads contest state live. The ranked leaderboard (`scored`) is public as soon as scoring
+finishes, but the bracket, champion, and verification record (`complete`) are **embargoed** until
+results are explicitly published — the public site shows a "bracket locked until the reveal" screen
+so finishing the bracket privately doesn't spoil the reveal video. Lift the embargo when the video
 is live:
 
 ```
