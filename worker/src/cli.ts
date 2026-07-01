@@ -8,6 +8,7 @@ import { pool } from "@prompt-battle/db";
 const COMMANDS = [
 	"create",
 	"ingest",
+	"dq",
 	"score",
 	"advance",
 	"reset",
@@ -43,6 +44,12 @@ const main = async () => {
 				const { runIngest } = await import("$src/ingest");
 
 				await runIngest();
+				break;
+			}
+			case "dq": {
+				const { runDq } = await import("$src/dq");
+
+				await runDq();
 				break;
 			}
 			case "score": {

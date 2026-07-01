@@ -57,6 +57,13 @@
       "when": 1782504771781,
       "tag": "0007_sad_sebastian_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782921506678,
+      "tag": "0008_powerful_maximus",
+      "breakpoints": true
     }
   ]
 }

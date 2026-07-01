@@ -45,6 +45,9 @@ export const entry = pgTable(
 		updatedAt: timestamp({ withTimezone: true }).notNull(),
 		status: entryStatus().notNull().default("eligible"),
 		dqReason: dqReason(),
+		// Operator justification for a manual disqualification (the `dq` command). Null for
+		// automated/ingest-time DQs, so a non-null note marks a hand-issued, human-judged removal.
+		dqNote: text(),
 		absoluteScore: real(),
 		rank: integer(),
 		seed: integer(),

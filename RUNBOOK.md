@@ -108,6 +108,29 @@ moderation completes before the transaction starts; moderation batches are paced
 transient `429`/`5xx` responses, including `Retry-After`, so a moderation failure leaves the
 contest `open` with no partial snapshot commit.
 
+#### Manual disqualification (optional, before scoring)
+
+After ingest and **before** scoring, you can disqualify entries by hand — but only for the two
+operator-judgment reasons the rules already allow: **affiliated** accounts and **TOS** violations
+the automated moderation missed (rules §3). Mechanical reasons (length, keywords, URL) are computed
+at ingest and cannot be applied here.
+
+```
+bun run worker dq --contest <id> --reason affiliated --channel <@handle|UC…,…> --note "<why>"
+bun run worker dq --contest <id> --reason tos --comment <ytCommentId,…> --note "<why>"
+```
+
+- `--note` is **required** — the operator's justification is stored on each removed entry (`dq_note`)
+  as the audit trail. A non-null note also marks the DQ as manual (automated/ingest DQs leave it
+  null), so the note is the one bit of provenance that distinguishes a hand-issued removal.
+- `affiliated` removes **every** entry from the given channel(s); `@handles` are resolved to channel
+  ids via the YouTube API — prefer raw `UC…` ids, which skip resolution and can't silently fail.
+- `tos` removes the specific comment(s) by YouTube comment id. There is no channel promotion — the
+  removed entry is simply out.
+- Only valid while the contest is **`snapshotted`**: scoring reads eligible rows, so a DQ here drops
+  entries with no rescoring. Once scoring has begun, `reset --to snapshotted` first, then re-`dq`.
+- It reports how many entries changed and warns about any handle/id that matched no eligible entry.
+
 ### 3. Score the field ✅
 
 ```
