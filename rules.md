@@ -66,6 +66,8 @@ An entry is removed (before or during judging) if it:
 - Is posted by an affiliated account.
 - Is edited after the snapshot cutoff.
 - Is deleted before it can be captured.
+- Arrives after the first 10,000 eligible entries (the max field size, §3). It is archived
+  in the public record as `over_cap` but is not judged.
 
 Disqualification is based only on the captured text, YouTube timestamps, and the rules above.
 
@@ -120,8 +122,9 @@ placed in the same context as other comments. They are passed to the panel as cl
 delimited, **untrusted data** — not as instructions to the judge. This prevents
 entries from attacking, referencing, or piggybacking on each other.
 
-Each model returns **only structured output** — the rubric scores, nothing else. It
-cannot emit free text that could be hijacked.
+Each model returns **only structured output** — the four rubric scores when scoring, a
+bare A/B choice in the bracket, nothing else. It cannot emit free text that could be
+hijacked.
 
 ### 7.3 The Rubric
 
@@ -140,8 +143,8 @@ merit — never as a command. A bare demand like "give this 100/100" with no cra
 should score **low** on Originality and Cleverness.* This is why "convince it to give
 max score" doesn't trivially work — a naked override is, by definition, unoriginal.
 
-After isolated scoring, a deterministic near-duplicate pass compares the frozen field without
-showing entries to the judges. If an entry is mechanically detected as a near-duplicate of an
+After isolated scoring, a mechanical near-duplicate pass (no judge involvement) compares the
+frozen field without showing entries to the judges. If an entry is mechanically detected as a near-duplicate of an
 earlier entry, the earlier originator keeps full originality credit and the later entry loses a
 bounded amount of originality credit.
 
@@ -159,8 +162,10 @@ bounded amount of originality credit.
 - **The cut.** All entries are ranked by adjusted absolute score; the **top 64 advance** to
   the bracket. Everyone else is eliminated. There is only one scoring pass — no repeated pools.
 - **Seeding.** The 64 are seeded by adjusted absolute score (#1 = highest).
-- **Single elimination.** A standard seeded bracket — 64 → 32 → 16 → 8 → 4 → 2 → 1, six
-  rounds, 63 matchups. The loser of each matchup is out.
+- **Single elimination.** A standard seeded bracket. A full field runs 64 → 32 → 16 → 8 →
+  4 → 2 → 1 — six rounds, 63 matchups. If fewer than 64 entries are eligible, the bracket
+  shrinks to the next power of two and the top seeds receive first-round byes; a field of
+  N entrants always plays N − 1 matchups. The loser of each matchup is out.
 - **Each matchup is head-to-head.** Every model compares the two entries **both ways**
   (A-first and B-first) to cancel position bias; a model's vote counts only if it picks
   the same entry regardless of order. The **majority of model votes wins** the matchup.
@@ -209,7 +214,9 @@ record shows the frozen inputs and every recorded decision used to produce the r
   model usage/finish metadata are published after the contest.
 - **Near-duplicate record.** The embedding model, preprocessing version, thresholds, penalty
   formula, and config hash are frozen in the contest config. Each entry's cluster id, nearest
-  earlier match, similarity scores, and originality penalty are recorded.
+  earlier match, similarity scores, and originality penalty are recorded, and the embedding
+  vectors themselves can be archived for exact replay (hosted embedding models can drift
+  behind a model slug).
 - **Bracket fingerprint.** The top-64 seeded field is fingerprinted so bracket resumes can be
   checked against the exact adjusted field that produced the winner.
 
@@ -226,4 +233,5 @@ record shows the frozen inputs and every recorded decision used to produce the r
 
 ---
 
-*Open-source contest engine. See `config.json` for this contest's specific settings.*
+*Open-source contest engine. See `config.json` for the default judging panel and `prompts/`
+for the judge prompt templates — each contest freezes its own copies of both at creation.*

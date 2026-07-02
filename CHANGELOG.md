@@ -11,13 +11,42 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — Near-duplicate originality pass
+## Current — Full-repo audit & pre-launch fixes
 
-Added a deterministic similarity pass between scoring and bracket advancement. The judges still score
-each entry in isolation, but the worker now clusters near-duplicates over the frozen field and applies
-a bounded originality penalty to later copies before ranking and seeding. The similarity config is
-hashed into the contest config, cluster decisions are stored for audit, and `advance` refuses to run
-until the pass is complete for the current scored field.
+Ran a structured audit of the whole engine — rules ↔ code adherence, every CLI command, and
+runbook accuracy — then fixed everything it surfaced. The headline finding: the "video-specific"
+judge prompts had been written _inside_ the prompt files' HTML header comments, which the loader
+strips — they could never reach a model. Reverted them (they were a one-off dev test) and added a
+loader test that asserts the live sections are what actually loads, plus CRLF→LF normalization so
+the pinned prompt hashes are reproducible from any checkout. The rest, by theme:
+
+- **Snapshot integrity.** The fetch cap now aborts on mid-page truncation, not just
+  pages-remaining (the one real data-loss path found); an affiliated `@handle` that fails to
+  resolve aborts ingest instead of warning (a quota error could otherwise freeze a field with
+  the owner still eligible); over-cap entries are archived as `over_cap` instead of vanishing
+  (rules §6 promises a complete record); post-cutoff-edited comments skip moderation and DQ as
+  `edited_after_cutoff` — a flag on unrecoverable text isn't attributable to the entry.
+- **Rule mechanics.** Keyword matching went Unicode-aware (`\b` is ASCII-only — "déjà" could
+  never match); URL detection catches `youtu.be/…` (the likeliest link in a YouTube comment)
+  without false-positive prose; both were previously untested and now are.
+- **Determinism.** Ranking gained an entry-id final tie-break (a full tie at YouTube's
+  second-granularity timestamps could recompute a different field on resume and trip the
+  bracket fingerprint for nothing), and the adjusted score is now the exact `raw − penalty`
+  from §7.4 — the old re-round coarsened the top-64 cut. Resume also cross-checks stored
+  matchup pairs against the recomputed bracket.
+- **Embargo integrity.** `reset` now re-embargoes (clears the publish timestamp, strips
+  revealed keywords) so a re-run bracket can't go public without an explicit `publish`; and
+  `publish` verifies the secrets file against the committed hash first — a reveal that
+  wouldn't re-derive the published hash is refused.
+- **Operator safety.** Timestamps require an explicit offset (offset-less ISO parses as local
+  time — a silent multi-hour embargo error); refused `reset`/`publish`/`dq` exit nonzero;
+  `ingest --due` isolates per-contest failures so one broken contest can't starve the cron
+  queue; `status` sizes expected matchups to the real entrant count and treats a scheduled
+  future publish as still embargoed.
+
+Synced `rules.md` (sub-64 brackets shrink with byes; `over_cap` listed in §4) and the runbook
+(cluster's real prerequisites, a `smoke` section with its cost warning, the new behaviors) to
+match. Two schema changes await migration: the `over_cap` DQ reason and a unique `videoId`.
 
 ## Phase 0 — Concept & rules
 
@@ -267,6 +296,14 @@ Follow-on refinements to the web app after the overhaul:
   panel replaces the countdown once entries close; times render in 12-hour local format; the
   entry-window length is derived from the real publish→snapshot gap; matchup judge labels reuse the
   shared judge chip; and the `/rules` hash fields are copyable like the footer fingerprint.
+
+## Phase 20 — Near-duplicate originality pass
+
+Added a deterministic similarity pass between scoring and bracket advancement. The judges still score
+each entry in isolation, but the worker now clusters near-duplicates over the frozen field and applies
+a bounded originality penalty to later copies before ranking and seeding. The similarity config is
+hashed into the contest config, cluster decisions are stored for audit, and `advance` refuses to run
+until the pass is complete for the current scored field.
 
 ---
 

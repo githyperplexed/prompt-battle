@@ -13,7 +13,8 @@ prompts see [prompts/](prompts/).
   - `DATABASE_URL` — Postgres connection (Railway). ✅
   - `OPENROUTER_API_KEY` — scoring; needed by `score` and `advance`. ✅
   - `YOUTUBE_API_KEY` — comment ingest; needed by `ingest`. ✅
-  - `OPENAI_API_KEY` — content moderation at ingest; needed by `ingest`. ✅
+  - `OPENAI_API_KEY` — content moderation at ingest, embeddings for the similarity pass;
+    needed by `ingest` and `cluster`. ✅
   - `EXCLUDED_CHANNELS` — optional; comma-separated `@handles` / `UC…` ids to exclude (owner, mods).
   - `LATITUDE_API_KEY` / `LATITUDE_PROJECT_SLUG` — optional; both enable Latitude AI telemetry for
     `score`, `advance`, and `smoke` (see [Telemetry](#telemetry-optional)). Absent → tracing is off.
@@ -44,20 +45,24 @@ Postgres (`score.audit`, `comparison.audit`) — Postgres remains the authoritat
   The worker rejects early runs, refuses incomplete YouTube comment-history fetches, excludes
   later posts, and disqualifies comments YouTube marks as edited after the cutoff. It prepares
   the full snapshot first, including moderated comments, then commits entries plus the status
-  flip in one locked database transaction. It can run unattended as a **Railway cron service**
-  (`worker ingest --due`, polled every ~10–15 min, idempotent via contest status). ⬜
+  flip in one locked database transaction. Cron mode (`worker ingest --due`) is implemented ✅
+  — idempotent via contest status, one failing contest is reported and skipped so it can't
+  starve the rest, and the run exits nonzero on any failure. The **Railway cron service**
+  deployment (polled every ~10–15 min) is still to be set up. ⬜
 - **`score` and `advance` run locally** — resume-safe batches you trigger by hand. The
   workload is LLM-bound, so running from a laptop against the Railway DB is fine.
 
 ## Run order
 
-Run these in sequence for one contest. **Every command is resume-safe** — re-running picks
-up where it left off (completed work is skipped via unique constraints).
+Run these in sequence for one contest. **Every pipeline command is resume-safe** — re-running
+picks up where it left off (completed work is skipped via unique constraints). The one
+exception is `create`, which refuses to run twice for the same video rather than resuming.
 
 > **Where do things stand?** `bun run worker status` (or `status --contest <id>`, `--json`)
 > prints a read-only snapshot of a contest — phase, field counts, scoring coverage, bracket
-> winner, pinned config hashes — and the next command to run. It only needs `DATABASE_URL`, so
-> it's the first thing a new operator or agent should run to orient.
+> winner, pinned config hashes — and the next command to run (the `next` field in `--json`).
+> It only needs `DATABASE_URL`, so it's the first thing a new operator or agent should run
+> to orient.
 
 ### 1. Create the contest ✅
 
@@ -72,7 +77,9 @@ Computes a salted hash of the keywords and stores **only the hash** on the conte
 words stay uncommitted yet verifiable after the reveal. It also freezes a versioned judging
 configuration containing the three-model panel and exact score/compare prompt templates with
 their hashes. Later commands validate and use only this stored configuration. `snapshot-at`
-defaults to `published-at + delay-hours` (168h). Prints the new contest id used by later steps.
+defaults to `published-at + delay-hours` (168h); the two flags are mutually exclusive.
+Timestamps must be ISO with an explicit offset (`Z` or `±hh:mm`) — offset-less strings would
+parse as local machine time. Prints the new contest id used by later steps.
 
 ### 2. Snapshot the comments ✅
 
@@ -84,8 +91,9 @@ bun run worker ingest --due              # cron mode: snapshot any contest past 
 Optional flags (defaults match the engine constants):
 
 - `--max-entries <n>` — cap eligible entries (default `10000`).
-- `--max-comments <n>` — cap the fetch window (default `100000`); the snapshot still aborts if
-  pagination has more pages at the cap rather than freezing a partial field.
+- `--max-comments <n>` — cap the fetch window (default `100000`); the snapshot aborts whenever
+  the cap truncates the history (mid-page or with pages remaining) rather than freezing a
+  partial field.
 - `--skip-moderation` — **testing only**; bypasses the OpenAI content screen (no `tos`
   disqualifications). It prints a warning; never use it for a real contest.
 
@@ -95,10 +103,13 @@ one-per-channel by earliest timestamp, no post-cutoff edit, OpenAI content moder
 `entry` rows — eligible and disqualified-with-reason. The run reports a
 `fetched / after-cutoff / duplicates / unique / stored / eligible` breakdown. Comments
 published after the cutoff are not entries; comments edited after it are stored with
-`edited_after_cutoff`. Publication/update exactly at the cutoff is accepted. The contest's
-actual capture start is stored in `captured_at`. Run at or just after the cutoff. Affiliated
-accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to channel ids via the
-API).
+`edited_after_cutoff` and are not sent to moderation (their current text is not the snapshot
+text). Otherwise-eligible comments beyond `--max-entries` are stored as disqualified
+`over_cap`, keeping the archive complete. Publication/update exactly at the cutoff is
+accepted. The contest's actual capture start is stored in `captured_at`. Run at or just after
+the cutoff. Affiliated accounts to exclude come from `EXCLUDED_CHANNELS` (handles resolved to
+channel ids via the API); a handle that fails to resolve aborts the snapshot rather than
+freezing a field with an affiliated account still eligible.
 
 Before any external API call, ingest validates the stored contest configuration and verifies
 that `secrets/<videoId>.json` still produces the keyword hash committed at creation. YouTube
@@ -124,12 +135,15 @@ bun run worker dq --contest <id> --reason tos --comment <ytCommentId,…> --note
   as the audit trail. A non-null note also marks the DQ as manual (automated/ingest DQs leave it
   null), so the note is the one bit of provenance that distinguishes a hand-issued removal.
 - `affiliated` removes **every** entry from the given channel(s); `@handles` are resolved to channel
-  ids via the YouTube API — prefer raw `UC…` ids, which skip resolution and can't silently fail.
+  ids via the YouTube API — an unresolvable handle or API failure aborts the command before any
+  change is made. Raw `UC…` ids skip resolution entirely.
 - `tos` removes the specific comment(s) by YouTube comment id. There is no channel promotion — the
   removed entry is simply out.
 - Only valid while the contest is **`snapshotted`**: scoring reads eligible rows, so a DQ here drops
   entries with no rescoring. Once scoring has begun, `reset --to snapshotted` first, then re-`dq`.
-- It reports how many entries changed and warns about any handle/id that matched no eligible entry.
+  A refused DQ (wrong phase) exits nonzero.
+- It reports how many entries changed and warns about any handle/id that matched no eligible entry
+  (warnings name the handle you typed, not the resolved channel id).
 
 ### 3. Score the field ✅
 
@@ -148,14 +162,20 @@ until every eligible entry has exactly one score from each panel model and the c
 
 ```
 bun run worker cluster --contest <id>
-bun run worker cluster --contest <id> --store-vectors   # optional exact replay archive
+bun run worker cluster --contest <id> --store-vectors   # archive vectors for exact replay
 ```
+
+Needs `OPENAI_API_KEY` (embeddings) and the contest's `secrets/<videoId>.json`, which is
+re-verified against the committed keyword hash before any API call — same gates as ingest.
 
 Computes embeddings over keyword-stripped entry text, finds hard near-duplicates using the frozen
 semantic + lexical thresholds, and stores each entry's cluster, nearest earlier match, similarity
-scores, and originality penalty. The pass is all-or-nothing: failed embedding batches leave
-`similarity_computed_at` null, and `advance` will refuse to run. Inspect the printed cluster report
-before advancing.
+scores, and originality penalty. The pass is all-or-nothing: a failed first run leaves
+`similarity_computed_at` null; a failed re-run leaves the previous complete pass in place. Either
+way `advance` re-derives the similarity fingerprint and refuses to run against stale or missing
+similarity data. Prefer `--store-vectors` for a real contest — hosted embedding models can drift
+behind their slug, and the archived vectors are what make the pass exactly replayable. Inspect the
+printed cluster report before advancing.
 
 ### 5. Run the bracket ✅
 
@@ -166,10 +186,12 @@ bun run worker advance --contest <id>
 Ranks entries by adjusted absolute score (raw mean total minus near-duplicate originality penalty),
 takes the **top 64**, seeds them, stores a `bracket_fingerprint` for that seeded field, and runs the
 single-elimination bracket (3 models × both orderings per matchup, majority vote, deadlock to the
-higher seed) down to one winner. Materializes per-entry `raw_absolute_score`,
-`originality_penalty`, `absolute_score` / `rank` / `seed` / `final_round` and the contest's
-`winner_entry_id`, then sets status `complete`. Resume-safe only when the recomputed seeded field
-matches the stored fingerprint; ~378 calls.
+higher seed) down to one winner. With fewer than 64 eligible entries the bracket shrinks to the
+next power of two with first-round byes for the top seeds — a field of N entrants plays N − 1
+matchups, and `status` sizes its matchup count accordingly. Materializes per-entry
+`raw_absolute_score`, `originality_penalty`, `absolute_score` / `rank` / `seed` / `final_round`
+and the contest's `winner_entry_id`, then sets status `complete`. Resume-safe only when the
+recomputed seeded field matches the stored fingerprint; ~378 calls for a full field.
 
 Database constraints keep score and matchup rows inside their contest boundary. The worker also
 asserts each stored or fresh bracket choice is one of that matchup's two entries before it can
@@ -203,8 +225,10 @@ or `complete` (a finished one).
 ### Resets & deletion
 
 `reset --contest <id> --to <stage>` unwinds a contest to an earlier stage, deleting everything
-produced after it (in one locked transaction). It refuses to skip levels, so you cannot strand
-downstream rows:
+produced after it (in one locked transaction). A refused reset (invalid stage transition) exits
+nonzero. Every reset also **re-embargoes**: it clears the publish timestamp and strips revealed
+keywords from the config, so a re-run contest cannot go public — or leak the reveal — without an
+explicit new `publish`. Levels cannot strand downstream rows:
 
 - `--to scored` — drop the bracket and similarity pass (from `scored` or `complete`); keeps scores.
 - `--to snapshotted` — drop scores and the bracket (from `scoring`/`scored`/`complete`); keeps
@@ -230,9 +254,15 @@ bun run worker publish --contest <id> --at <iso>      # publish at a specific ti
 bun run worker publish --contest <id> --unpublish     # re-embargo
 ```
 
+`--at` must be an ISO timestamp with an explicit offset (`Z` or `±hh:mm`). A future `--at` stays
+embargoed until that moment — `status` reports `published: no` and the site stays locked until the
+time passes. A refused publish (wrong phase) exits nonzero.
+
 Publishing also reveals the keywords + salt into the contest config (read from the local
 `secrets/<videoId>.json`, so that file must be present when you publish) — this is what lets anyone
-re-derive the committed keyword hash, and it surfaces on `/rules`. `--unpublish` strips them again.
+re-derive the committed keyword hash, and it surfaces on `/rules`. The secret is verified against
+the committed hash first; a reveal that would not re-derive the published hash is refused.
+`--unpublish` strips the revealed keywords again.
 
 Still to build: export the full audit bundle for the public record —
 
@@ -243,6 +273,18 @@ Still to build: export the full audit bundle for the public record —
 - matchup decisions with usage/finish metadata;
 - similarity config, clusters, nearest-earlier links, similarities, and originality penalties;
 - bracket fingerprint and winner.
+
+## Smoke test (optional)
+
+```
+bun run worker smoke
+```
+
+Scores one hardcoded sample entry with all three default-panel models and runs one pairwise
+comparison — **4 paid OpenRouter calls** — printing each call's output, latency, and cost. It
+reads and writes no contest data, but needs `DATABASE_URL` (client import) and
+`OPENROUTER_API_KEY`, and emits Latitude traces when telemetry is configured. Use it to
+sanity-check credentials, the panel, and prompt plumbing before a costly scoring run.
 
 ## Notes
 
