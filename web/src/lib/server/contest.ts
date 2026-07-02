@@ -67,17 +67,22 @@ const panelIdsOf = (config: unknown): string[] =>
 
 const buildVerification = (
 	config: ContestConfigShape | null,
-	fingerprint: string | null
+	fingerprint: string | null,
+	resultsPublishedAt: Date | null
 ): VerificationData => {
 	const settings = config?.judge?.requestSettings;
+	// `publish --at <future>` writes the revealed keywords into config immediately, so they
+	// must be withheld here until the embargo actually lifts — same time gate as the results.
+	const published = !!resultsPublishedAt && resultsPublishedAt.getTime() <= Date.now();
 
 	return {
+		published,
 		panel: config?.panel?.map((model) => model.id) ?? [],
 		scorePromptHash: config?.prompts?.score?.hash ?? "–",
 		comparePromptHash: config?.prompts?.compare?.hash ?? "–",
 		keywordHash: config?.keywordHash ?? "–",
-		revealedKeywords: config?.revealed?.keywords ?? null,
-		revealedSalt: config?.revealed?.salt ?? null,
+		revealedKeywords: published ? (config?.revealed?.keywords ?? null) : null,
+		revealedSalt: published ? (config?.revealed?.salt ?? null) : null,
 		fingerprint,
 		judgeSettings: [
 			{ key: "max retries", value: String(settings?.maxRetries ?? "–") },
@@ -110,7 +115,8 @@ export const loadActiveVerification = async (): Promise<VerificationData | null>
 
 	return buildVerification(
 		(contest.config ?? null) as ContestConfigShape | null,
-		contest.bracketFingerprint
+		contest.bracketFingerprint,
+		contest.resultsPublishedAt
 	);
 };
 

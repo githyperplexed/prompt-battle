@@ -99,12 +99,15 @@ export type Champion = {
 } | null;
 
 export type VerificationData = {
+	// True only when results are publicly visible now — a publish scheduled for the future
+	// stays false (and embargoed) until its time passes.
+	published: boolean;
 	panel: string[];
 	scorePromptHash: string;
 	comparePromptHash: string;
 	keywordHash: string;
 	// The plaintext keywords + salt, revealed into the config at publish so the hash can be
-	// re-derived. Null until results are published (or after re-embargo).
+	// re-derived. Null until results are publicly visible (or after re-embargo).
 	revealedKeywords: string[] | null;
 	revealedSalt: string | null;
 	fingerprint: string | null;

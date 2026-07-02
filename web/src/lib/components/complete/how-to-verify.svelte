@@ -6,6 +6,7 @@
 
 	let { verification }: { verification: VerificationData } = $props();
 
+	const published = $derived(verification.published);
 	const revealed = $derived(!!(verification.revealedKeywords?.length && verification.revealedSalt));
 </script>
 
@@ -28,24 +29,40 @@
 	</div>
 {/snippet}
 
+{#snippet what(text: string)}
+	<p class="m-0 text-sm leading-relaxed text-mut">
+		<b class="font-semibold text-tx">Check:</b>
+		{text}
+	</p>
+{/snippet}
+
+{#snippet why(text: string)}
+	<p class="m-0 text-sm leading-relaxed text-mut">
+		<b class="font-semibold text-tx">Proves:</b>
+		{text}
+	</p>
+{/snippet}
+
 <div class="flex flex-col gap-4">
 	<div>
 		<h2 class="m-0 text-xl font-bold">How to verify this result</h2>
 		<p class="mt-2 text-sm leading-relaxed text-mut">
-			The judging inputs below were committed as hashes when the contest was created — before a
-			single entry was scored. Once the results are published you can reproduce each step and check
-			it against these commitments. Here's how, in order.
+			The idea is simple: every input that decides the winner — the judges, their instructions, and
+			the hidden keywords — was locked in as a hash <i>before</i> any entry was judged, and every decision
+			the judges made was recorded. Each step below tells you what to check and what that check proves.
+			Together they show the published result follows from the published rules and the frozen inputs —
+			with nothing swapped, tuned, or hand-picked along the way.
 		</p>
 	</div>
 
 	<div class="flex flex-col gap-3 rounded-card border border-line bg-card p-5">
 		{@render head(1, "The judges & their instructions", "Verifiable now", true)}
-		<p class="text-sm leading-relaxed text-mut">
-			Three independent models — one per provider — scored every entry, using instructions frozen at
-			creation. Hash <code class="font-mono text-xs text-tx">prompts/judge-score.md</code> and
-			<code class="font-mono text-xs text-tx">prompts/judge-compare.md</code> in the source and compare
-			them to the committed hashes below.
-		</p>
+		{@render what(
+			"Hash prompts/judge-score.md and prompts/judge-compare.md from the source repo and compare them to the two committed hashes below. The three judge models are listed as pinned."
+		)}
+		{@render why(
+			"Every entry was judged by this exact panel with these exact instructions — the prompts could not have been rewritten after seeing the entries, or the hashes would no longer match."
+		)}
 		<div class="flex flex-wrap gap-2">
 			{#each verification.panel as model, i (model)}
 				<JudgeChip index={i} {model} />
@@ -70,11 +87,12 @@
 			revealed ? "Verifiable now" : "After the reveal",
 			revealed
 		)}
-		<p class="text-sm leading-relaxed text-mut">
-			A salted hash of the three keywords was committed before judging — proof they were fixed in
-			advance, not chosen to fit the entries. Re-hash the revealed keywords and salt (the method is
-			in the source) and compare to this hash. They stay hidden until the results are published.
-		</p>
+		{@render what(
+			"Re-hash the revealed keywords and salt (the exact method is in the source and in verification.md) and compare the result to the committed keyword hash below. The keywords stay hidden until the results are published."
+		)}
+		{@render why(
+			"The keywords were fixed before judging began — they were not chosen afterwards to let certain entries in or keep others out."
+		)}
 		{#if verification.revealedKeywords && verification.revealedSalt}
 			<CopyField label="Keywords" value={verification.revealedKeywords.join(", ")} />
 			<CopyField label="Salt" value={verification.revealedSalt} />
@@ -83,13 +101,18 @@
 	</div>
 
 	<div class="flex flex-col gap-3 rounded-card border border-line bg-card p-5">
-		{@render head(3, "The scored field & seeding", "After the results", false)}
-		<p class="text-sm leading-relaxed text-mut">
-			Every eligible entry was scored once by each model; raw absolute score is the mean of the
-			three totals. Near-duplicate entries then lose originality credit by a deterministic
-			similarity pass, and the adjusted score ranks the field and seeds the top 64. That seeded
-			field is fingerprinted — recompute the fingerprint and compare to this one.
-		</p>
+		{@render head(
+			3,
+			"The scored field & seeding",
+			published ? "Verifiable now" : "After the results",
+			published
+		)}
+		{@render what(
+			"From the published per-model scores, recompute each entry's score (the mean of its three model totals, minus any recorded near-duplicate originality penalty), rank the field, take the top 64, and recompute the seeded-field fingerprint. Compare it to the fingerprint below."
+		)}
+		{@render why(
+			"The ranking and bracket seeding follow mechanically from the recorded scores — no entry was moved up, dropped, or hand-placed into the bracket."
+		)}
 		{#if verification.similarity}
 			<CopyField label="Similarity config" value={verification.similarity.hash} />
 			<div class="grid gap-2 sm:grid-cols-2">
@@ -110,18 +133,20 @@
 	</div>
 
 	<div class="flex flex-col gap-3 rounded-card border border-line bg-card p-5">
-		{@render head(4, "The bracket", "After the results", false)}
-		<p class="text-sm leading-relaxed text-mut">
-			Each matchup was judged by all three models both ways — A-first and B-first — to cancel
-			position bias; a vote counts only if the model picks the same entry regardless of order, and
-			the majority wins (a deadlock goes to the higher seed). Every matchup's per-model votes are
-			shown on the results, so you can replay them down to the single winner.
-		</p>
+		{@render head(4, "The bracket", published ? "Verifiable now" : "After the results", published)}
+		{@render what(
+			"Open any matchup on the results page and recount its votes: each of the three models compared the two entries twice (A-first and B-first), a model's vote only counts if it picked the same entry both times, the majority wins, and a deadlock goes to the higher seed. Repeat down to the final."
+		)}
+		{@render why(
+			"The champion follows from the recorded votes alone — no matchup outcome was overridden."
+		)}
 	</div>
 
 	<p class="text-sm leading-relaxed text-dim text-pretty">
-		<b class="font-semibold text-mut">On reproducibility:</b> hosted models can change behind a slug,
-		so exact re-scoring isn't promised. The audit verifies the recorded decisions against the frozen inputs
-		and committed hashes — not live re-inference.
+		<b class="font-semibold text-mut">On reproducibility:</b> hosted models can change behind a
+		slug, so re-running the judges is not promised to give identical scores. What is verifiable is
+		that the published result follows from the recorded decisions and the inputs committed before
+		judging. The full step-by-step process, with the exact formulas, is in
+		<code class="font-mono text-xs text-tx">verification.md</code> in the source repo.
 	</p>
 </div>
