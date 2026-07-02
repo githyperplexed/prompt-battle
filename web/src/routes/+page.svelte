@@ -8,12 +8,16 @@
 	import StatusNotice from "$lib/components/phases/status-notice.svelte";
 	import UpcomingPhase from "$lib/components/phases/upcoming-phase.svelte";
 	import ContestShell from "$lib/components/shell/contest-shell.svelte";
+	import SiteHead from "$lib/components/shell/site-head.svelte";
 	import Card from "$lib/components/ui/card.svelte";
+	import { META_DESCRIPTION, pageTitle } from "$lib/utilities/copy";
 
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
 </script>
+
+<SiteHead title={pageTitle(data.state)} description={META_DESCRIPTION} />
 
 {#if data.state === "not_found" || !data.contest}
 	<StatusNotice

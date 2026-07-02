@@ -1,6 +1,8 @@
 <script lang="ts">
 	import HowToVerify from "$lib/components/complete/how-to-verify.svelte";
+	import SiteHead from "$lib/components/shell/site-head.svelte";
 	import Card from "$lib/components/ui/card.svelte";
+	import { CONTEST_TITLE } from "$lib/utilities/copy";
 
 	import type { PageData } from "./$types";
 
@@ -14,9 +16,10 @@
 		"rounded-control border border-line bg-card px-3.5 py-2 text-sm font-medium text-acc hover:border-line2";
 </script>
 
-<svelte:head>
-	<title>Rules & verification</title>
-</svelte:head>
+<SiteHead
+	title={`Rules & verification — ${CONTEST_TITLE}`}
+	description="How the contest is judged and how anyone can verify the result — committed keyword hashes, frozen judging inputs, and the public audit record."
+/>
 
 <div class="mx-auto w-full max-w-page px-6 py-10">
 	<a class="text-sm text-mut hover:text-tx" href="/">← Back to the contest</a>
