@@ -48,10 +48,51 @@ Postgres (`score.audit`, `comparison.audit`) — Postgres remains the authoritat
   the full snapshot first, including moderated comments, then commits entries plus the status
   flip in one locked database transaction. Cron mode (`worker ingest --due`) is implemented ✅
   — idempotent via contest status, one failing contest is reported and skipped so it can't
-  starve the rest, and the run exits nonzero on any failure. The **Railway cron service**
-  deployment (polled every ~10–15 min) is still to be set up. ⬜
+  starve the rest, and the run exits nonzero on any failure. Deploy it unattended as a
+  **Railway cron service** (see [Deploy the ingest cron](#deploy-the-ingest-cron-railway)). ✅
 - **`score` and `advance` run locally** — resume-safe batches you trigger by hand. The
   workload is LLM-bound, so running from a laptop against the Railway DB is fine.
+
+## Deploy the ingest cron (Railway)
+
+A Railway service runs `ingest --due` every 30 minutes so the snapshot fires unattended once a
+contest passes its cutoff. Timing slack is safe by design: the worker rejects early runs, the
+cutoff excludes later comments no matter when the snapshot actually executes, and overlapping or
+skipped ticks are covered by idempotency — the only cost of a longer poll is a slightly wider
+window for a commenter to delete their entry between cutoff and capture.
+
+The service config is committed at [worker/railway.json](worker/railway.json): start command
+`bun run worker ingest --due`, schedule `*/30 * * * *`, and **restart policy `NEVER`** — ingest
+deliberately exits nonzero on failure, and the default on-failure policy would rerun it in a
+tight loop against the YouTube quota. The next scheduled tick is the retry. (Railway cron
+constraints, all already satisfied: the process must exit on its own — the CLI closes the pool;
+runs still active at the next tick are skipped; execution time can drift by a few minutes;
+schedules are UTC.)
+
+One-time setup in the Railway dashboard:
+
+1. **New service from the GitHub repo.** Leave the root directory at the repo root (the worker
+   needs the Bun workspace); Railpack detects Bun automatically.
+2. **Point it at the config file:** Settings → Config-as-code → `/worker/railway.json`. This is
+   what keeps the cron schedule off any other service deployed from this repo.
+3. **Variables:** `DATABASE_URL` (reference the Railway Postgres over the private network),
+   `YOUTUBE_API_KEY`, `OPENAI_API_KEY` (moderation), `EXCLUDED_CHANNELS`, and `KEYWORD_SECRETS`
+   (below). `OPENROUTER_API_KEY` and the Latitude vars are **not** needed — the CLI imports
+   per command, and ingest makes no judge calls.
+4. Optional: set watch paths to `/worker/**` and `/db/**` so web-only pushes don't rebuild it.
+
+**`KEYWORD_SECRETS` — required.** The gitignored `secrets/<videoId>.json` files never reach a
+Railway build, but ingest must verify the keyword commitment and validate entries against the
+real keywords. Provide the secret as a JSON map in the `KEYWORD_SECRETS` variable:
+
+```json
+{ "<videoId>": { "keywords": ["ONE", "TWO", "THREE"], "salt": "<the salt>" } }
+```
+
+A local secrets file always takes precedence; the env var is the fallback for deployed
+environments. Either source is verified against the contest's committed keyword hash before any
+external API work, so a wrong or stale value fails closed. Add each new contest's entry to the
+map when you `create` it, and remove entries after the reveal.
 
 ## Run order
 
@@ -68,7 +109,8 @@ exception is `create`, which refuses to run twice for the same video rather than
 ### 1. Create the contest ✅
 
 Put this contest's keywords and salt in a gitignored secrets file `secrets/<videoId>.json`
-(format in `secrets/example.json`), then:
+(format in `secrets/example.json`) and mirror them into the cron service's `KEYWORD_SECRETS`
+variable (see [Deploy the ingest cron](#deploy-the-ingest-cron-railway)), then:
 
 ```bash
 bun run worker create --video <id> --published-at <iso> [--delay-hours 168] [--snapshot-at <iso>]
