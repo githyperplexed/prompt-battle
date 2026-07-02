@@ -288,7 +288,8 @@ export const loadLeaderboard = async (
 				originalityPenalty,
 				clusterId: similarity?.clusterId ?? null,
 				nearestEarlierEntryId: similarity?.nearestEarlierEntryId ?? null,
-				absoluteScore: Math.round((aggregate.absoluteScore - originalityPenalty) * 10) / 10
+				// Exact subtraction, mirroring the worker (rules.md §7.4) — no re-rounding.
+				absoluteScore: aggregate.absoluteScore - originalityPenalty
 			}
 		];
 	});

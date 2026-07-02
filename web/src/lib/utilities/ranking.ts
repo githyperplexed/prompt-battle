@@ -10,12 +10,19 @@ export const aggregateTotals = (totals: number[]): Aggregate => {
 	return { absoluteScore: Math.round(mean * 10) / 10, minModel: Math.min(...totals), variance };
 };
 
-// Absolute score, then higher min-model score, then lower variance, then earliest snapshot.
-export const rankByScore = <T extends Aggregate & { publishedAt: Date }>(entries: T[]): T[] =>
+// Absolute score, then higher min-model score, then lower variance, then earliest snapshot,
+// then entry id so a full tie still orders deterministically (matches the worker).
+export const rankByScore = <T extends Aggregate & { id: string; publishedAt: Date }>(
+	entries: T[]
+): T[] =>
 	[...entries].sort((a, b) => {
 		if (b.absoluteScore !== a.absoluteScore) return b.absoluteScore - a.absoluteScore;
 		if (b.minModel !== a.minModel) return b.minModel - a.minModel;
 		if (a.variance !== b.variance) return a.variance - b.variance;
 
-		return a.publishedAt.getTime() - b.publishedAt.getTime();
+		const byTime = a.publishedAt.getTime() - b.publishedAt.getTime();
+
+		if (byTime !== 0) return byTime;
+
+		return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 	});

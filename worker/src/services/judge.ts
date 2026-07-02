@@ -35,6 +35,9 @@ export type JudgeAuditMetadata = {
 	totalUsage: unknown;
 	warnings?: unknown;
 	providerMetadata?: unknown;
+	// The model's pre-clamp rubric output (score calls only). The stored score is clamped to
+	// 0–25 per dimension; without this the published record could not reveal an off-scale model.
+	rawOutput?: unknown;
 };
 
 type ScoreResult = { score: Score; nonce: string; audit: JudgeAuditMetadata };
@@ -79,7 +82,7 @@ export const scoreEntry = async (
 		return {
 			score: clampScore(result.output),
 			nonce,
-			audit: auditMetadata(result, requestSettings)
+			audit: { ...auditMetadata(result, requestSettings), rawOutput: result.output }
 		};
 	};
 

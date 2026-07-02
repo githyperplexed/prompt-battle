@@ -14,11 +14,18 @@ export const aggregateTotals = (totals: number[]): Aggregate => {
 type Rankable = Aggregate & { id: string; publishedAt: Date };
 
 // §7.6 order: absolute score, then higher min-model score, then lower variance, then earliest.
+// Entry id last: a full tie (possible at YouTube's second-granularity timestamps) must still
+// rank deterministically, or a resume could recompute a different field and trip the bracket
+// fingerprint check on nothing.
 export const rankEntries = <T extends Rankable>(entries: T[]): T[] =>
 	[...entries].sort((a, b) => {
 		if (b.absoluteScore !== a.absoluteScore) return b.absoluteScore - a.absoluteScore;
 		if (b.minModel !== a.minModel) return b.minModel - a.minModel;
 		if (a.variance !== b.variance) return a.variance - b.variance;
 
-		return a.publishedAt.getTime() - b.publishedAt.getTime();
+		const byTime = a.publishedAt.getTime() - b.publishedAt.getTime();
+
+		if (byTime !== 0) return byTime;
+
+		return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 	});

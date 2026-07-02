@@ -152,7 +152,9 @@ const loadRankedField = async (
 				rawAbsoluteScore: aggregate.absoluteScore,
 				originalityPenalty,
 				...aggregate,
-				absoluteScore: Math.round((aggregate.absoluteScore - originalityPenalty) * 10) / 10
+				// §7.4: exact subtraction from the one-decimal raw mean — re-rounding here would
+				// coarsen the top-64 cut and manufacture ties the rules don't have.
+				absoluteScore: aggregate.absoluteScore - originalityPenalty
 			}
 		];
 	});
@@ -232,10 +234,20 @@ const getOrCreateMatchup = async (
 	const existing = await db.query.matchup.findFirst({
 		where: (m, { and, eq }) =>
 			and(eq(m.contestId, contestId), eq(m.round, round), eq(m.slot, slot)),
-		columns: { id: true, winnerId: true }
+		columns: { id: true, winnerId: true, entryAId: true, entryBId: true }
 	});
 
-	if (existing) return existing;
+	if (existing) {
+		// The fingerprint pins the seeded field, not the pairing layout — cross-check the stored
+		// pair so a pairing-code change between run and resume can never adopt the wrong matchup.
+		if (existing.entryAId !== entryAId || existing.entryBId !== entryBId) {
+			throw new Error(
+				`Stored matchup r${round} s${slot} pairs ${existing.entryAId} vs ${existing.entryBId}, but the recomputed bracket expects ${entryAId} vs ${entryBId}.`
+			);
+		}
+
+		return existing;
+	}
 
 	await db
 		.insert(matchup)
@@ -445,6 +457,13 @@ export const advanceContest = async (contestId: string) =>
 			config,
 			target.similarityFingerprint
 		);
+
+		if (seeded.length < 2) {
+			throw new Error(
+				`Contest ${contestId} has ${seeded.length} scored entrant(s); a bracket needs at least 2.`
+			);
+		}
+
 		const bracket = await ensureBracketFingerprint(contestId, fingerprint);
 
 		if (bracket.skipped) return bracket;
