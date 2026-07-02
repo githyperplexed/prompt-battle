@@ -203,7 +203,9 @@ the prize passes to the runner-up.
 
 Because this repo is public, the contest is designed to be **independently auditable**. Hosted
 AI models can change behind a model slug, so exact replay is not promised; instead, the public
-record shows the frozen inputs and every recorded decision used to produce the result.
+record shows the frozen inputs and every recorded decision used to produce the result. The
+full step-by-step audit process, with the exact formulas, is in
+[verification.md](verification.md).
 
 - **Pinned judging inputs.** Contest creation freezes the model panel, exact judge prompt
   templates, and safe request settings in the contest record. Sampling behavior is recorded as

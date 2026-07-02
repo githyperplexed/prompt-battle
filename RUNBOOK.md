@@ -2,7 +2,8 @@
 
 Operational guide for running one contest end to end. For the contest rules see
 [rules.md](rules.md); for the panel/models see [config.json](config.json); for the judge
-prompts see [prompts/](prompts/).
+prompts see [prompts/](prompts/); for how a result is independently audited see
+[verification.md](verification.md).
 
 **Status legend:** ✅ implemented · 🚧 stub (scaffolded, not yet functional) · ⬜ not built yet
 

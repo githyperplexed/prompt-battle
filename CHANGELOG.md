@@ -48,6 +48,13 @@ Synced `rules.md` (sub-64 brackets shrink with byes; `over_cap` listed in §4) a
 (cluster's real prerequisites, a `smoke` section with its cost warning, the new behaviors) to
 match. Two schema changes await migration: the `over_cap` DQ reason and a unique `videoId`.
 
+Follow-up: the `/rules` verification panel now derives every step's "Verifiable now" tag from
+a time-aware published flag (steps 3–4 were hardcoded, and a scheduled future `publish` leaked
+the revealed keywords onto `/rules` before the embargo lifted — both fixed), with each step
+rewritten as an explicit Check/Proves pair. Wrote `verification.md` — the full audit guide with
+the commitment timeline and exact hash/fingerprint formulas — and rebuilt `AGENTS.md` into a
+repo map (what each essential document is for and how the pieces relate).
+
 ## Phase 0 — Concept & rules
 
 Started from the game idea and pressure-tested it. Key design decisions:
