@@ -30,6 +30,7 @@ export type StatusReport = {
 		fingerprint: string | null;
 		published: boolean;
 	} | null;
+	next: string;
 };
 
 export type ContestSummary = { id: string; videoId: string; status: string; hasWinner: boolean };
@@ -118,8 +119,7 @@ export const formatStatusReport = (report: StatusReport): string[] => {
 	}
 
 	lines.push("");
-	const next = nextStep(report.status, !!report.resultsPublishedAt).replace(/<id>/g, report.id);
-	lines.push(`Next → ${next}`);
+	lines.push(`Next → ${report.next.replace(/<id>/g, report.id)}`);
 
 	return lines;
 };

@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 
+import { parseIsoTimestamp } from "$src/utilities/args";
 import { publishContest } from "$src/services/contests";
 
 export const runPublish = async () => {
@@ -23,18 +24,20 @@ export const runPublish = async () => {
 		return;
 	}
 
-	const at = values.at ? new Date(values.at) : new Date();
-
-	if (Number.isNaN(at.getTime())) throw new Error("--at must be a valid ISO timestamp");
-
+	const at = values.at ? parseIsoTimestamp(values.at, "--at") : new Date();
 	const result = await publishContest(contestId, at);
 
 	if (result.skipped) {
 		console.log(
 			`Contest ${contestId} cannot be published from status ${result.status} (needs scored or complete).`
 		);
+		process.exitCode = 1;
 		return;
 	}
 
-	console.log(`Published contest ${contestId} at ${at.toISOString()}; results are now public.`);
+	console.log(
+		at.getTime() > Date.now()
+			? `Scheduled contest ${contestId} to publish at ${at.toISOString()}; embargoed until then.`
+			: `Published contest ${contestId} at ${at.toISOString()}; results are now public.`
+	);
 };

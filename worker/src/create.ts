@@ -1,11 +1,12 @@
 import { parseArgs } from "node:util";
 
+import { parseIsoTimestamp } from "$src/utilities/args";
+import { createContestConfig } from "$src/utilities/contest-config";
+import { keywordHash } from "$src/utilities/keywords";
 import { defaultPanel } from "$src/services/config";
 import { createContest } from "$src/services/contests";
 import { defaultPromptTemplates } from "$src/services/prompts";
 import { loadKeywordSecret } from "$src/services/secrets";
-import { createContestConfig } from "$src/utilities/contest-config";
-import { keywordHash } from "$src/utilities/keywords";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -29,20 +30,26 @@ export const runCreate = async () => {
 
 	if (!publishedAtRaw) throw new Error("--published-at <ISO timestamp> is required");
 
-	const videoPublishedAt = new Date(publishedAtRaw);
+	const videoPublishedAt = parseIsoTimestamp(publishedAtRaw, "--published-at");
 
-	if (Number.isNaN(videoPublishedAt.getTime())) {
-		throw new Error("--published-at must be a valid ISO timestamp");
+	if (values["snapshot-at"] && values["delay-hours"]) {
+		throw new Error("Pass either --snapshot-at or --delay-hours, not both");
 	}
 
-	const delayHours = values["delay-hours"] ? Number(values["delay-hours"]) : 168;
+	const delayHoursRaw = values["delay-hours"];
+	let delayHours = 168;
+
+	if (delayHoursRaw) {
+		delayHours = Number(delayHoursRaw);
+
+		if (!Number.isFinite(delayHours) || delayHours <= 0) {
+			throw new Error("--delay-hours must be a positive number of hours");
+		}
+	}
+
 	const snapshotAt = values["snapshot-at"]
-		? new Date(values["snapshot-at"])
+		? parseIsoTimestamp(values["snapshot-at"], "--snapshot-at")
 		: new Date(videoPublishedAt.getTime() + delayHours * HOUR_MS);
-
-	if (Number.isNaN(snapshotAt.getTime())) {
-		throw new Error("--snapshot-at must be a valid ISO timestamp");
-	}
 
 	const secret = loadKeywordSecret(videoId);
 	const hash = keywordHash(secret.keywords, secret.salt);

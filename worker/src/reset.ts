@@ -24,6 +24,7 @@ export const runReset = async () => {
 
 	if (result.skipped) {
 		console.log(`Contest ${contestId} cannot reset to ${to} from status ${result.status}.`);
+		process.exitCode = 1;
 		return;
 	}
 

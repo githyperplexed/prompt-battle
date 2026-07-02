@@ -34,7 +34,8 @@ const report: StatusReport = {
 		],
 		complete: false
 	},
-	bracket: null
+	bracket: null,
+	next: "score --contest <id>  (resume — scoring incomplete)"
 };
 
 describe("nextStep", () => {

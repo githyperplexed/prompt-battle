@@ -1,6 +1,7 @@
 import { contest, db, entry, eq, matchup, score, similarity, sql } from "@prompt-battle/db";
 
 import { canResetTo, type ResetTarget } from "$src/utilities/contest-status";
+import { matchesKeywordHash } from "$src/utilities/keywords";
 import { withContestLock } from "$src/services/locks";
 import { loadKeywordSecret } from "$src/services/secrets";
 
@@ -60,7 +61,7 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 
 			const found = await tx.query.contest.findFirst({
 				where: (c, { eq }) => eq(c.id, contestId),
-				columns: { id: true, status: true }
+				columns: { id: true, status: true, config: true }
 			});
 
 			if (!found) throw new Error(`No contest with id ${contestId}`);
@@ -68,6 +69,12 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 			if (!canResetTo(found.status, to)) {
 				return { skipped: true as const, status: found.status };
 			}
+
+			// A reset invalidates any published result: re-embargo and re-conceal the keywords so
+			// the re-run pipeline cannot go public (or leak the reveal) without an explicit publish.
+			const config = { ...((found.config ?? {}) as Record<string, unknown>) };
+
+			delete config.revealed;
 
 			await tx.delete(matchup).where(eq(matchup.contestId, contestId));
 			await tx.delete(similarity).where(eq(similarity.contestId, contestId));
@@ -83,7 +90,9 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 						winnerEntryId: null,
 						bracketFingerprint: null,
 						similarityComputedAt: null,
-						similarityFingerprint: null
+						similarityFingerprint: null,
+						resultsPublishedAt: null,
+						config
 					})
 					.where(eq(contest.id, contestId));
 			} else if (to === "snapshotted") {
@@ -96,7 +105,9 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 						winnerEntryId: null,
 						bracketFingerprint: null,
 						similarityComputedAt: null,
-						similarityFingerprint: null
+						similarityFingerprint: null,
+						resultsPublishedAt: null,
+						config
 					})
 					.where(eq(contest.id, contestId));
 			} else {
@@ -108,7 +119,9 @@ export const resetContest = async (contestId: string, to: ResetTarget) =>
 						winnerEntryId: null,
 						bracketFingerprint: null,
 						similarityComputedAt: null,
-						similarityFingerprint: null
+						similarityFingerprint: null,
+						resultsPublishedAt: null,
+						config
 					})
 					.where(eq(contest.id, contestId));
 			}
@@ -164,6 +177,16 @@ export const publishContest = async (contestId: string, at: Date | null) =>
 
 		if (at !== null) {
 			const secret = loadKeywordSecret(found.videoId);
+			const committed = typeof base.keywordHash === "string" ? base.keywordHash : null;
+
+			// A reveal that fails hash re-derivation would publicly break the §9 commitment —
+			// refuse rather than publish keywords that don't verify.
+			if (!committed || !matchesKeywordHash(secret.keywords, secret.salt, committed)) {
+				throw new Error(
+					`Keyword secret for video ${found.videoId} does not match the hash committed at creation; refusing to publish a non-verifying reveal.`
+				);
+			}
+
 			config = { ...base, revealed: { keywords: secret.keywords, salt: secret.salt } };
 		} else {
 			config = { ...base };

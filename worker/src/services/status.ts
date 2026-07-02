@@ -2,7 +2,7 @@ import { count, db, entry, eq, matchup, score } from "@prompt-battle/db";
 
 import { BRACKET_SIZE } from "$src/constants";
 import { isSnapshotDue } from "$src/utilities/snapshot";
-import type { ContestSummary, StatusReport } from "$src/utilities/status";
+import { nextStep, type ContestSummary, type StatusReport } from "$src/utilities/status";
 
 type ConfigShape = {
 	panel?: { id: string }[];
@@ -33,6 +33,7 @@ export const loadStatusReport = async (contestId: string): Promise<StatusReport 
 	const config = (c.config ?? null) as ConfigShape | null;
 	const panel = config?.panel?.map((model) => model.id) ?? [];
 	const reached = (...statuses: string[]) => statuses.includes(c.status);
+	const publishedNow = !!c.resultsPublishedAt && c.resultsPublishedAt.getTime() <= Date.now();
 
 	let field: StatusReport["field"] = null;
 
@@ -103,12 +104,16 @@ export const loadStatusReport = async (contestId: string): Promise<StatusReport 
 			if (w) winner = { author: w.authorDisplayName, score: w.absoluteScore ?? 0, seed: w.seed };
 		}
 
+		// Byes create no matchup rows, so a seeded field of N entrants produces N - 1 matchups.
+		const entrants = Math.min(field?.eligible ?? 0, BRACKET_SIZE);
+
 		bracket = {
 			matchups: counted[0]?.n ?? 0,
-			expected: BRACKET_SIZE - 1,
+			expected: Math.max(entrants - 1, 0),
 			winner,
 			fingerprint: c.bracketFingerprint,
-			published: !!c.resultsPublishedAt
+			// Published means publicly visible now — a scheduled future publish is still embargoed.
+			published: publishedNow
 		};
 	}
 
@@ -130,6 +135,7 @@ export const loadStatusReport = async (contestId: string): Promise<StatusReport 
 		similarityFingerprint: c.similarityFingerprint,
 		field,
 		scoring,
-		bracket
+		bracket,
+		next: nextStep(c.status, publishedNow)
 	};
 };
