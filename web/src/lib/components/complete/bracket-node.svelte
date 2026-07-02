@@ -27,7 +27,7 @@
 		<div
 			class={cn(
 				"flex items-center gap-2 rounded-sm px-1 py-1 text-xs",
-				team.win ? "bg-white/[0.04] font-semibold text-tx" : "text-dim"
+				team.win ? "bg-white/4 font-semibold text-tx" : "text-dim"
 			)}
 		>
 			<span
