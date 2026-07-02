@@ -4,7 +4,7 @@
 	import FieldSummary from "$lib/components/snapshot/field-summary.svelte";
 	import Card from "$lib/components/ui/card.svelte";
 	import LocalTime from "$lib/components/ui/local-time.svelte";
-	import type { ContestMeta, EntryListData, SnapshotData } from "$lib/types/contest";
+	import type { ContestMeta, EntryListData, EntryStatus, SnapshotData } from "$lib/types/contest";
 
 	import PhaseIntro from "./phase-intro.svelte";
 
@@ -15,6 +15,19 @@
 	}: { contest: ContestMeta; snapshot: SnapshotData; entries: EntryListData } = $props();
 
 	let selectedDqReason = $state<string | null>(null);
+	let selectedStatus = $state<EntryStatus | null>(null);
+
+	// A DQ reason implies "disqualified", so it contradicts an "eligible" status filter (and vice
+	// versa) — selecting one side of that pair clears the other.
+	const selectStatus = (status: EntryStatus | null) => {
+		selectedStatus = selectedStatus === status ? null : status;
+		if (selectedStatus === "eligible") selectedDqReason = null;
+	};
+
+	const selectDqReason = (reason: string) => {
+		selectedDqReason = selectedDqReason === reason ? null : reason;
+		if (selectedDqReason && selectedStatus === "eligible") selectedStatus = null;
+	};
 </script>
 
 <section class="flex flex-col gap-5 pt-7">
@@ -32,6 +45,8 @@
 		total={snapshot.total}
 		eligible={snapshot.eligible}
 		disqualified={snapshot.disqualified}
+		selectedStatus={snapshot.eligible === 0 ? null : selectedStatus}
+		onSelect={snapshot.eligible === 0 ? undefined : selectStatus}
 	/>
 
 	{#if snapshot.eligible === 0}
@@ -40,15 +55,13 @@
 			advances to judging.
 		</Card>
 	{:else}
-		<DqBreakdown
-			dq={snapshot.dq}
-			selectedReason={selectedDqReason}
-			onSelect={(reason) => (selectedDqReason = selectedDqReason === reason ? null : reason)}
-		/>
+		<DqBreakdown dq={snapshot.dq} selectedReason={selectedDqReason} onSelect={selectDqReason} />
 		<EntryList
 			data={entries}
 			dqReason={selectedDqReason}
+			status={selectedStatus}
 			onClearDq={() => (selectedDqReason = null)}
+			onClearStatus={() => (selectedStatus = null)}
 		/>
 	{/if}
 </section>

@@ -28,6 +28,9 @@ export type ScoringData = {
 	perModel: { id: string; done: number }[];
 };
 
+// Eligibility filter for the snapshot entry list ("captured" is everything, so it has no value).
+export type EntryStatus = "eligible" | "disqualified";
+
 export type EntryListItem = {
 	id: string;
 	author: string;

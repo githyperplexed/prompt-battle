@@ -1,6 +1,6 @@
 <script lang="ts">
 	import LocalTime from "$lib/components/ui/local-time.svelte";
-	import type { EntryListData } from "$lib/types/contest";
+	import type { EntryListData, EntryStatus } from "$lib/types/contest";
 	import { cn } from "$lib/utilities/cn";
 	import { hasTextSelection } from "$lib/utilities/dom";
 	import { dqLabel } from "$lib/utilities/labels";
@@ -8,8 +8,16 @@
 	let {
 		data,
 		dqReason = null,
-		onClearDq
-	}: { data: EntryListData; dqReason?: string | null; onClearDq?: () => void } = $props();
+		status = null,
+		onClearDq,
+		onClearStatus
+	}: {
+		data: EntryListData;
+		dqReason?: string | null;
+		status?: EntryStatus | null;
+		onClearDq?: () => void;
+		onClearStatus?: () => void;
+	} = $props();
 
 	const PREVIEW = 100;
 
@@ -29,11 +37,13 @@
 		const q = applied.trim().toLowerCase();
 
 		return data.entries.filter((e) => {
+			const matchesStatus =
+				!status || (status === "eligible" ? e.dqReason === null : e.dqReason !== null);
 			const matchesDq = !dqReason || e.dqReason === dqReason;
 			const matchesQuery =
 				!q || e.author.toLowerCase().includes(q) || e.channelId.toLowerCase().includes(q);
 
-			return matchesDq && matchesQuery;
+			return matchesStatus && matchesDq && matchesQuery;
 		});
 	});
 
@@ -61,6 +71,16 @@
 			placeholder="Filter by author or channel id…"
 			bind:value={query}
 		/>
+		{#if status}
+			<div class="flex items-center justify-between gap-3 text-sm text-mut">
+				<span>
+					Showing <span class="font-medium text-tx">{status} entries</span>
+				</span>
+				<button type="button" class="text-dim hover:underline" onclick={() => onClearStatus?.()}>
+					Clear
+				</button>
+			</div>
+		{/if}
 		{#if dqReason}
 			<div class="flex items-center justify-between gap-3 text-sm text-mut">
 				<span>
@@ -76,7 +96,11 @@
 	<div class="overflow-hidden rounded-card border border-line bg-card">
 		{#if filtered.length === 0}
 			<div class="py-9 text-center text-sm text-dim">
-				{dqReason ? `No entries match ${dqLabel(dqReason)}.` : `No entries match “${applied}”.`}
+				{dqReason
+					? `No entries match ${dqLabel(dqReason)}.`
+					: status
+						? `No ${status} entries match.`
+						: `No entries match “${applied}”.`}
 			</div>
 		{:else}
 			{#each filtered as e (e.id)}
