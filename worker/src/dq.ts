@@ -34,7 +34,8 @@ export const runDq = async () => {
 	if (!note) throw new Error('--note "<why>" is required — it records why the entry was removed');
 
 	let selector: DqSelector;
-	let requested: string[];
+	// Resolved id → the token the operator typed, so warnings speak in their terms.
+	let labelById: Map<string, string>;
 
 	if (reason === "affiliated") {
 		if (values.comment)
@@ -47,21 +48,19 @@ export const runDq = async () => {
 
 		// Import lazily so the tos path never loads the YouTube client (which requires an API key).
 		const { resolveChannelTokens } = await import("$src/services/excluded");
+		const idByToken = await resolveChannelTokens(tokens);
 
-		requested = [...(await resolveChannelTokens(tokens))];
-
-		if (requested.length === 0) throw new Error("No channels resolved from --channel");
-
-		selector = { by: "channel", ids: requested };
+		labelById = new Map([...idByToken].map(([token, id]) => [id, token]));
+		selector = { by: "channel", ids: [...labelById.keys()] };
 	} else {
 		if (values.channel) throw new Error("--channel is not valid with --reason tos; use --comment");
 
-		requested = parseCsv(values.comment);
+		const ids = parseCsv(values.comment);
 
-		if (requested.length === 0)
-			throw new Error("--reason tos requires --comment <youtubeCommentId,…>");
+		if (ids.length === 0) throw new Error("--reason tos requires --comment <youtubeCommentId,…>");
 
-		selector = { by: "comment", ids: requested };
+		labelById = new Map(ids.map((id) => [id, id]));
+		selector = { by: "comment", ids };
 	}
 
 	const result = await disqualifyEntries(contestId, reason, selector, note);
@@ -70,6 +69,7 @@ export const runDq = async () => {
 		console.log(
 			`Contest ${contestId} is ${result.status}; manual DQ is only allowed while snapshotted (before scoring). Reset to snapshotted first if you must DQ after scoring.`
 		);
+		process.exitCode = 1;
 
 		return;
 	}
@@ -78,7 +78,9 @@ export const runDq = async () => {
 		`Disqualified ${result.count} entr${result.count === 1 ? "y" : "ies"} as "${reason}" in contest ${contestId}.`
 	);
 
-	const unmatched = requested.filter((id) => !result.matched.includes(id));
+	const unmatched = [...labelById]
+		.filter(([id]) => !result.matched.includes(id))
+		.map(([, label]) => label);
 
 	if (unmatched.length > 0) {
 		console.warn(`No eligible entry matched: ${unmatched.join(", ")}`);

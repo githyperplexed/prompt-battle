@@ -109,7 +109,9 @@ describe("snapshot row building", () => {
 		expect(result.rows[0]?.dqReason).toBe("edited_after_cutoff");
 	});
 
-	test("content policy flags take precedence over other disqualification reasons", () => {
+	test("post-cutoff edits take precedence over content flags", () => {
+		// The flagged text is the post-edit text, not the entry's snapshot text — the DQ must
+		// be attributed to the edit, not to a violation the cutoff text may never have had.
 		const result = buildSnapshotRows({
 			contestId: "contest-1",
 			comments: [comment({ commentId: "flagged", updatedAt: after })],
@@ -120,10 +122,24 @@ describe("snapshot row building", () => {
 		});
 
 		expect(result.rows[0]?.status).toBe("disqualified");
+		expect(result.rows[0]?.dqReason).toBe("edited_after_cutoff");
+	});
+
+	test("content policy flags take precedence over mechanical disqualification reasons", () => {
+		const result = buildSnapshotRows({
+			contestId: "contest-1",
+			comments: [comment({ commentId: "flagged", text: "way too short" })],
+			snapshotAt: cutoff,
+			keywords: ["alpha", "beta"],
+			excluded: new Set(),
+			flaggedCommentIds: new Set(["flagged"])
+		});
+
+		expect(result.rows[0]?.status).toBe("disqualified");
 		expect(result.rows[0]?.dqReason).toBe("tos");
 	});
 
-	test("caps eligible rows without dropping disqualified audit rows", () => {
+	test("archives entries beyond the eligible cap as disqualified over_cap rows", () => {
 		const result = buildSnapshotRows({
 			contestId: "contest-1",
 			comments: [
@@ -140,7 +156,12 @@ describe("snapshot row building", () => {
 
 		expect(result.eligible).toBe(1);
 		expect(result.unique).toBe(3);
-		expect(result.rows.map((row) => row.youtubeCommentId)).toEqual(["eligible", "duplicate"]);
+		expect(result.overCap).toBe(1);
+		expect(result.rows.map((row) => [row.youtubeCommentId, row.status, row.dqReason])).toEqual([
+			["eligible", "eligible", null],
+			["duplicate", "disqualified", "duplicate_channel"],
+			["over-cap", "disqualified", "over_cap"]
+		]);
 	});
 
 	test("deduplicates comments that YouTube pagination returns more than once", () => {

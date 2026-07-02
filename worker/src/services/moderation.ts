@@ -55,6 +55,13 @@ const moderateBatch = async (texts: string[], apiKey: string): Promise<boolean[]
 		if (res.ok) {
 			const parsed = responseSchema.parse(await res.json());
 
+			// A short response would silently pass the unmatched tail as unflagged.
+			if (parsed.results.length !== texts.length) {
+				throw new Error(
+					`OpenAI moderation returned ${parsed.results.length} results for ${texts.length} inputs`
+				);
+			}
+
 			return parsed.results.map((result) => result.flagged);
 		}
 

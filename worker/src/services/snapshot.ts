@@ -94,8 +94,12 @@ export const snapshotContest = async (
 	// Testing escape hatch (--skip-moderation): leaves `flagged` empty, so no entry is
 	// disqualified as `tos`. Production runs always moderate.
 	if (!options.skipModeration) {
+		// Skip comments edited after the cutoff: their current text is not the snapshot text,
+		// so a flag on it would be unattributable — they are DQ'd as edited_after_cutoff anyway.
 		const moderationCandidates = comments.filter(
-			(comment) => comment.publishedAt.getTime() <= target.snapshotAt.getTime()
+			(comment) =>
+				comment.publishedAt.getTime() <= target.snapshotAt.getTime() &&
+				comment.updatedAt.getTime() <= target.snapshotAt.getTime()
 		);
 		const flags = await flagViolations(moderationCandidates.map((c) => c.text));
 
@@ -124,7 +128,8 @@ export const snapshotContest = async (
 		afterCutoff: prepared.afterCutoff,
 		unique: prepared.unique,
 		stored: rows.length,
-		eligible: prepared.eligible
+		eligible: prepared.eligible,
+		overCap: prepared.overCap
 	};
 };
 
@@ -133,13 +138,28 @@ export const snapshotDueContests = async (
 ) => {
 	const due = await db.query.contest.findMany({
 		where: (c, { and, eq, lte }) => and(eq(c.status, "open"), lte(c.snapshotAt, new Date())),
-		columns: { id: true }
+		columns: { id: true },
+		orderBy: (c, { asc }) => asc(c.snapshotAt)
 	});
 
-	const results = [];
+	type DueOutcome = { id: string } & (
+		| Awaited<ReturnType<typeof snapshotContest>>
+		| { failed: true; error: string }
+	);
+
+	const results: DueOutcome[] = [];
 
 	for (const d of due) {
-		results.push({ id: d.id, ...(await snapshotContest(d.id, options)) });
+		// One broken contest (missing secrets file, API outage) must not starve the rest of
+		// the due queue on every cron tick.
+		try {
+			results.push({ id: d.id, ...(await snapshotContest(d.id, options)) });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+
+			console.error(`Snapshot failed for contest ${d.id}: ${message}`);
+			results.push({ id: d.id, failed: true, error: message });
+		}
 	}
 
 	return results;

@@ -35,7 +35,13 @@ export const channelsResponseSchema = z.object({
 	items: z
 		.array(z.object({ id: z.string() }))
 		.optional()
-		.default([])
+		.default([]),
+	error: z
+		.object({
+			message: z.string(),
+			errors: z.array(z.object({ reason: z.string() })).optional()
+		})
+		.optional()
 });
 
 export type YouTubeComment = {

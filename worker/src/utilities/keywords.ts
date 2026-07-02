@@ -15,8 +15,15 @@ export const keywordHash = (keywords: string[], salt: string): string =>
 		.update(`${salt}:${normalizeKeywords(keywords)}`)
 		.digest("hex");
 
+// JS `\b` is ASCII-only — a keyword starting or ending in a non-ASCII letter (café, déjà)
+// could never match. "Whole word" here means not directly adjacent to another letter or
+// digit, the same delimiter definition the similarity pass uses for keyword stripping.
 export const hasAllKeywords = (text: string, keywords: string[]): boolean =>
-	keywords.every((keyword) => new RegExp(`\\b${escapeRegExp(keyword.trim())}\\b`, "i").test(text));
+	keywords.every((keyword) =>
+		new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(keyword.trim())}(?![\\p{L}\\p{N}])`, "iu").test(
+			text
+		)
+	);
 
 export const matchesKeywordHash = (
 	keywords: string[],

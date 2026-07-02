@@ -12,7 +12,7 @@ export type SnapshotComment = {
 	updatedAt: Date;
 };
 
-type SnapshotDqReason = DqReason | "duplicate_channel" | "tos" | "edited_after_cutoff";
+type SnapshotDqReason = DqReason | "duplicate_channel" | "tos" | "edited_after_cutoff" | "over_cap";
 
 export type SnapshotEntryRow = {
 	contestId: string;
@@ -33,6 +33,7 @@ export type SnapshotRowsResult = {
 	afterCutoff: number;
 	unique: number;
 	eligible: number;
+	overCap: number;
 };
 
 export const classifySnapshotTiming = (
@@ -80,6 +81,7 @@ export const buildSnapshotRows = ({
 	const seenComments = new Set<string>();
 	const rows: SnapshotEntryRow[] = [];
 	let eligible = 0;
+	let overCap = 0;
 
 	for (const comment of inScopeComments) {
 		// YouTube pagination can return the same comment on overlapping pages; one row per id.
@@ -90,12 +92,14 @@ export const buildSnapshotRows = ({
 		let status: "eligible" | "disqualified";
 		let reason: SnapshotEntryRow["dqReason"] = null;
 
-		if (flaggedCommentIds.has(comment.commentId)) {
-			status = "disqualified";
-			reason = "tos";
-		} else if (editedAfterCutoff.has(comment.commentId)) {
+		// Edit-after-cutoff wins over a content flag: the current text is not the entry's
+		// snapshot text, so a violation in it cannot be attributed to the entry (rules §2).
+		if (editedAfterCutoff.has(comment.commentId)) {
 			status = "disqualified";
 			reason = "edited_after_cutoff";
+		} else if (flaggedCommentIds.has(comment.commentId)) {
+			status = "disqualified";
+			reason = "tos";
 		} else {
 			const verdict = classifyComment(comment, { keywords, excluded });
 
@@ -106,7 +110,11 @@ export const buildSnapshotRows = ({
 				status = "disqualified";
 				reason = "duplicate_channel";
 			} else if (eligible >= maxEntries) {
-				continue;
+				// Archived but not counted — rules §3 accepts only the first `maxEntries`
+				// eligible entries, and §6 promises every captured comment a published record.
+				status = "disqualified";
+				reason = "over_cap";
+				overCap += 1;
 			} else {
 				status = "eligible";
 				countedChannels.add(comment.channelId);
@@ -133,6 +141,7 @@ export const buildSnapshotRows = ({
 		rows,
 		afterCutoff: comments.length - inScopeComments.length,
 		unique: seenComments.size,
-		eligible
+		eligible,
+		overCap
 	};
 };

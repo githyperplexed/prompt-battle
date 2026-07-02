@@ -25,6 +25,8 @@ export const runIngest = async () => {
 	}
 
 	if (values.due) {
+		if (values.contest) throw new Error("--due and --contest are mutually exclusive");
+
 		const results = await snapshotDueContests({ maxEntries, maxComments, skipModeration });
 
 		if (results.length === 0) {
@@ -32,12 +34,24 @@ export const runIngest = async () => {
 			return;
 		}
 
+		let failed = 0;
+
 		for (const r of results) {
-			const detail = r.skipped
-				? `skipped (${r.status})`
-				: `stored ${r.stored}, eligible ${r.eligible}`;
+			let detail: string;
+
+			if ("failed" in r) {
+				failed += 1;
+				detail = `FAILED — ${r.error}`;
+			} else if (r.skipped) {
+				detail = `skipped (${r.status})`;
+			} else {
+				detail = `stored ${r.stored}, eligible ${r.eligible}`;
+			}
+
 			console.log(`${r.id}: ${detail}`);
 		}
+
+		if (failed > 0) process.exitCode = 1;
 
 		return;
 	}
@@ -62,4 +76,8 @@ export const runIngest = async () => {
 	console.log(`  unique:       ${result.unique}`);
 	console.log(`  stored:       ${result.stored}`);
 	console.log(`  eligible:     ${result.eligible}`);
+
+	if (result.overCap > 0) {
+		console.log(`  over cap:     ${result.overCap} (stored as disqualified "over_cap")`);
+	}
 };

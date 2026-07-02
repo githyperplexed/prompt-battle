@@ -1,8 +1,12 @@
 import { MAX_CHARS, MIN_CHARS } from "$src/constants";
 import { hasAllKeywords } from "$src/utilities/keywords";
 
+// Heuristic, not a full URL parser: protocol/www links, youtu.be share links (the likeliest
+// link in a YouTube comment — `be` stays off the bare-TLD list because "to.be"-style typos
+// would false-positive), and bare domains on common TLDs. The trailing lookahead (instead of
+// `\b`) keeps hyphenated prose like "epic.Co-sign" from matching.
 const URL_REGEX =
-	/(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|io|gg|tv|co|me|ly|app|dev|xyz|link|info|biz)\b/i;
+	/(https?:\/\/|www\.)\S+|\byoutu\.be\/\S+|\b[a-z0-9-]+\.(?:com|net|org|io|gg|tv|co|me|ly|ai|app|dev|xyz|link|info|biz)(?![\w-])/i;
 
 export const countCharacters = (text: string): number => [...text].length;
 

@@ -83,7 +83,11 @@ export const fetchAllComments = async (
 		skipped += page.skipped;
 		pageToken = page.nextPageToken;
 
-		if (pageToken && comments.length >= maxComments) complete = false;
+		// The history is truncated whenever comments exist beyond the cap — a page cut mid-way
+		// or another page still pending. Either way the snapshot must abort, not freeze partial.
+		if (page.comments.length > remaining || (pageToken && comments.length >= maxComments)) {
+			complete = false;
+		}
 	} while (complete && pageToken);
 
 	if (skipped > 0) console.warn(`Skipped ${skipped} unparseable comment(s) for video ${videoId}`);
@@ -91,9 +95,23 @@ export const fetchAllComments = async (
 	return { comments, complete, maxComments, skipped };
 };
 
+// Returns null only when the handle genuinely does not exist; an API failure (quota, auth)
+// throws so callers can never mistake an outage for "no such channel".
 export const resolveChannelId = async (handle: string): Promise<string | null> => {
 	const res = await fetch(buildChannelUrl(handle, apiKey));
 	const parsed = channelsResponseSchema.parse(await res.json());
+
+	if (parsed.error) {
+		const reason = parsed.error.errors?.[0]?.reason;
+
+		throw new Error(
+			`YouTube API error (${reason ?? res.status}) resolving channel "${handle}": ${parsed.error.message}`
+		);
+	}
+
+	if (!res.ok) {
+		throw new Error(`YouTube API returned HTTP ${res.status} resolving channel "${handle}"`);
+	}
 
 	return parsed.items[0]?.id ?? null;
 };
