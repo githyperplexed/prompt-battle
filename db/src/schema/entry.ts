@@ -24,6 +24,7 @@ export const dqReason = pgEnum("dq_reason", [
 	"affiliated",
 	"tos",
 	"edited_after_cutoff",
+	"over_cap",
 	"deleted"
 ]);
 

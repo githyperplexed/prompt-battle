@@ -12,7 +12,8 @@ import { newId } from "../id";
 import { contest } from "./contest";
 import { entry } from "./entry";
 
-// round: 1 = round of 64, 2 = round of 32, ... 6 = final.
+// round: 1 = the bracket's first round (round of 64 only for a full field — smaller fields
+// run a smaller bracket with byes, so the final is round log2(bracketSize), not always 6).
 // slot: position of the matchup within its round (0-based).
 export const matchup = pgTable(
 	"matchup",

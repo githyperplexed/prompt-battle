@@ -15,7 +15,7 @@ export const contest = pgTable("contest", {
 	id: text()
 		.primaryKey()
 		.$defaultFn(() => newId()),
-	videoId: text().notNull(),
+	videoId: text().notNull().unique(),
 	videoPublishedAt: timestamp({ withTimezone: true }).notNull(),
 	snapshotAt: timestamp({ withTimezone: true }).notNull(),
 	capturedAt: timestamp({ withTimezone: true }),
