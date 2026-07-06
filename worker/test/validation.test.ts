@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { MAX_CHARS } from "../src/constants";
 import { classifyComment, containsUrl, countCharacters } from "../src/utilities/validation";
 
 describe("URL detection", () => {
@@ -57,7 +58,7 @@ describe("comment classification", () => {
 	});
 
 	test("rejects over-length comments", () => {
-		const tooLong = "alpha beta " + "x".repeat(995);
+		const tooLong = "alpha beta " + "x".repeat(MAX_CHARS - 10);
 
 		expect(classifyComment({ text: tooLong, channelId: "channel-1" }, context)).toEqual({
 			eligible: false,

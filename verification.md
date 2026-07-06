@@ -92,7 +92,7 @@ publish refuses to reveal keywords that do not re-derive it.
 channel id, YouTube timestamps, and — for disqualified entries — the reason. Re-apply the
 mechanical rules from [rules.md](rules.md) §3 to any entry and confirm its status:
 
-- 50–1,000 characters inclusive, counted in Unicode code points.
+- 50–3,000 characters inclusive, counted in Unicode code points.
 - All three keywords present: case-insensitive, whole-word (not adjacent to another letter
   or digit), any order.
 - No URLs.

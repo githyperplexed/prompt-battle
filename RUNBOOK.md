@@ -140,7 +140,7 @@ Optional flags (defaults match the engine constants):
 - `--skip-moderation` — **testing only**; bypasses the OpenAI content screen (no `tos`
   disqualifications). It prints a warning; never use it for a real contest.
 
-Fetches all top-level comments, validates each (length 50–1,000, all 3 keywords, no URLs,
+Fetches all top-level comments, validates each (length 50–3,000, all 3 keywords, no URLs,
 one-per-channel by earliest timestamp, no post-cutoff edit, OpenAI content moderation →
 `tos`), de-duplicates comments YouTube returns on overlapping pages, and freezes them as
 `entry` rows — eligible and disqualified-with-reason. The run reports a

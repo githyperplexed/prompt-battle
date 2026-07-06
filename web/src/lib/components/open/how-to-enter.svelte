@@ -4,7 +4,7 @@
 	const steps = [
 		"Comment once on the video.",
 		"Include all 3 hidden keywords (revealed in the video).",
-		"Keep it 50–1,000 characters.",
+		"Keep it 50–3,000 characters.",
 		"No links.",
 		"One entry per channel."
 	];
