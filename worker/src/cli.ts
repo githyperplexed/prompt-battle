@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { pool } from "@prompt-battle/db";
 
 const COMMANDS = [
+	"secret",
 	"create",
 	"ingest",
 	"dq",
@@ -35,6 +36,12 @@ const main = async () => {
 
 	try {
 		switch (command) {
+			case "secret": {
+				const { runSecret } = await import("$src/secret");
+
+				await runSecret();
+				break;
+			}
 			case "create": {
 				const { runCreate } = await import("$src/create");
 

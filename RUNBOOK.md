@@ -108,13 +108,20 @@ exception is `create`, which refuses to run twice for the same video rather than
 
 ### 1. Create the contest ✅
 
-Put this contest's keywords and salt in a gitignored secrets file `secrets/<videoId>.json`
-(format in `secrets/example.json`) and mirror them into the cron service's `KEYWORD_SECRETS`
-variable (see [Deploy the ingest cron](#deploy-the-ingest-cron-railway)), then:
+Generate this contest's gitignored keyword secret, then create the contest:
 
 ```bash
+bun run worker secret --video <id> --keywords <one,two,three>
 bun run worker create --video <id> --published-at <iso> [--delay-hours 168] [--snapshot-at <iso>]
 ```
+
+`secret` mints a random salt (or takes `--salt <string>` to reuse a known one), writes
+`secrets/<videoId>.json`, and prints the salted keyword hash plus the ready-to-paste
+`KEYWORD_SECRETS` entry — mirror that into the cron service's variable (see
+[Deploy the ingest cron](#deploy-the-ingest-cron-railway)). It refuses to overwrite an
+existing secrets file unless you pass `--force`, since discarding a salt after `create`
+would leave the committed hash underivable. Writing the file by hand still works (format
+in `secrets/example.json`).
 
 Computes a salted hash of the keywords and stores **only the hash** on the contest — the
 words stay uncommitted yet verifiable after the reveal. It also freezes a versioned judging

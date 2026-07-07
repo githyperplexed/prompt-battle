@@ -1,6 +1,31 @@
 import { describe, expect, test } from "bun:test";
 
-import { hasAllKeywords, keywordHash, matchesKeywordHash } from "../src/utilities/keywords";
+import {
+	hasAllKeywords,
+	keywordHash,
+	matchesKeywordHash,
+	parseKeywordList
+} from "../src/utilities/keywords";
+
+describe("keyword list parsing", () => {
+	test("splits, trims, and keeps the original forms", () => {
+		expect(parseKeywordList(" Marble, lantern ,quartz ")).toEqual(["Marble", "lantern", "quartz"]);
+	});
+
+	test("rejects anything but exactly three keywords", () => {
+		expect(() => parseKeywordList("one,two")).toThrow("exactly three");
+		expect(() => parseKeywordList("one,two,three,four")).toThrow("exactly three");
+		expect(() => parseKeywordList("one,,three")).toThrow("exactly three");
+	});
+
+	test("rejects case-insensitive duplicates", () => {
+		expect(() => parseKeywordList("word,WORD,other")).toThrow("distinct");
+	});
+
+	test("rejects the normalization separator", () => {
+		expect(() => parseKeywordList("a|b,two,three")).toThrow('"|"');
+	});
+});
 
 describe("keyword commitment", () => {
 	const keywords = ["first", "second", "third"];

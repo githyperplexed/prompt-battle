@@ -1,8 +1,10 @@
+import { existsSync, unlinkSync } from "node:fs";
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { loadKeywordSecret } from "../src/services/secrets";
+import { loadKeywordSecret, mintSalt, writeKeywordSecret } from "../src/services/secrets";
 
 const originalEnv = process.env.KEYWORD_SECRETS;
+const TEST_VIDEO_ID = "test-write-round-trip";
 
 afterEach(() => {
 	if (originalEnv === undefined) {
@@ -10,6 +12,42 @@ afterEach(() => {
 	} else {
 		process.env.KEYWORD_SECRETS = originalEnv;
 	}
+
+	const written = new URL(`../../secrets/${TEST_VIDEO_ID}.json`, import.meta.url);
+
+	if (existsSync(written)) unlinkSync(written);
+});
+
+describe("keyword secret writing", () => {
+	const secret = { keywords: ["one", "two", "three"], salt: "some-salt" };
+
+	test("writes a file that loads back identically", () => {
+		writeKeywordSecret(TEST_VIDEO_ID, secret);
+
+		expect(loadKeywordSecret(TEST_VIDEO_ID)).toEqual(secret);
+	});
+
+	test("refuses to overwrite an existing secret without force", () => {
+		writeKeywordSecret(TEST_VIDEO_ID, secret);
+
+		expect(() => writeKeywordSecret(TEST_VIDEO_ID, secret)).toThrow("already exists");
+		expect(() => writeKeywordSecret(TEST_VIDEO_ID, secret, true)).not.toThrow();
+	});
+
+	test("rejects a video id that could escape the secrets directory", () => {
+		expect(() => writeKeywordSecret("../evil", secret)).toThrow("letters, digits");
+	});
+
+	test("rejects a malformed secret", () => {
+		expect(() => writeKeywordSecret(TEST_VIDEO_ID, { keywords: ["only-one"], salt: "s" })).toThrow(
+			"must contain"
+		);
+	});
+
+	test("mints hex salts", () => {
+		expect(mintSalt()).toMatch(/^[0-9a-f]{32}$/);
+		expect(mintSalt()).not.toBe(mintSalt());
+	});
 });
 
 describe("keyword secret loading", () => {
