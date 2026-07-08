@@ -36,6 +36,15 @@ after the cutoff.** YouTube does not provide comment revision history: if its `u
 timestamp is after the cutoff, the entry is disqualified because the cutoff text cannot be
 recovered. A comment deleted before capture cannot be recovered and does not enter.
 
+> ⚠️ **Editing restarts your entry's clock.** Wherever these rules care about which of two
+> entries came first — originality credit for near-duplicates (§7.3) and score tie-breaks
+> (§7.6) — an entry counts from the time it was **last edited**, not first posted. An entry
+> that is never edited keeps its original timestamp. This exists so nobody can post a
+> placeholder early and later edit it into a copy of a better comment to steal its
+> originality credit. The flip side: if someone copies your comment and you edit yours
+> afterward — even to fix a typo — the copy now counts as older than you. Post it right the
+> first time.
+
 ---
 
 ## 3. Eligibility
@@ -151,7 +160,10 @@ max score" doesn't trivially work — a naked override is, by definition, unorig
 After isolated scoring, a mechanical near-duplicate pass (no judge involvement) compares the
 frozen field without showing entries to the judges. If an entry is mechanically detected as a near-duplicate of an
 earlier entry, the earlier originator keeps full originality credit and the later entry loses a
-bounded amount of originality credit.
+bounded amount of originality credit. "Earlier" means the earlier **precedence timestamp**:
+the time the entry was last edited, or its original post time if it was never edited (§2).
+Editing an entry moves it to the back of that line, so a comment posted early and edited into
+a copy of a later entry gains nothing from its early post time.
 
 ### 7.4 Absolute Scoring (single pass)
 
@@ -189,7 +201,8 @@ seeding), they are ordered by:
 
 1. **Higher minimum single-model score** (rewards cross-model consensus).
 2. **Lower variance across the three models** (more agreement wins).
-3. **Earlier snapshot timestamp** (first to post wins).
+3. **Earlier precedence timestamp** (last-edit time, or post time if never edited — see §2;
+   first unedited text wins).
 
 A deadlocked **matchup** is broken in favor of the higher seed (above), so the bracket
 always resolves to a single winner.

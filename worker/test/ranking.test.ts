@@ -4,9 +4,9 @@ import { aggregateTotals, rankEntries } from "../src/utilities/ranking";
 
 const at = (iso: string) => new Date(iso);
 
-const entry = (id: string, totals: number[], publishedAt = at("2026-06-24T10:00:00.000Z")) => ({
+const entry = (id: string, totals: number[], precedenceAt = at("2026-06-24T10:00:00.000Z")) => ({
 	id,
-	publishedAt,
+	precedenceAt,
 	...aggregateTotals(totals)
 });
 
@@ -41,13 +41,13 @@ describe("rankEntries (§7.6)", () => {
 		expect(ranked.map((e) => e.id)).toEqual(["tight", "wide"]);
 	});
 
-	test("breaks full scoring ties by earlier snapshot timestamp", () => {
+	test("breaks full scoring ties by earlier precedence timestamp (last edit, not post time)", () => {
 		const ranked = rankEntries([
-			entry("later", [80, 80, 80], at("2026-06-24T11:00:00.000Z")),
-			entry("earlier", [80, 80, 80], at("2026-06-24T10:00:00.000Z"))
+			entry("edited-late", [80, 80, 80], at("2026-06-24T11:00:00.000Z")),
+			entry("untouched", [80, 80, 80], at("2026-06-24T10:00:00.000Z"))
 		]);
 
-		expect(ranked.map((e) => e.id)).toEqual(["earlier", "later"]);
+		expect(ranked.map((e) => e.id)).toEqual(["untouched", "edited-late"]);
 	});
 
 	test("is deterministic on a complete tie regardless of input order", () => {

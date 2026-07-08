@@ -126,7 +126,9 @@ adjusted score = raw score − originality penalty                          (exa
 ```
 
 Rank by adjusted score descending, breaking ties in order by: higher minimum single-model
-total → lower variance across the three totals → earlier snapshot timestamp → entry id.
+total → lower variance across the three totals → earlier precedence timestamp (the entry's
+YouTube `updatedAt`: its last-edit time, equal to its publish time when never edited —
+rules.md §2) → entry id.
 The top 64 advance and are seeded in rank order.
 ([ranking.ts](worker/src/utilities/ranking.ts).)
 
@@ -154,9 +156,12 @@ earlier match, similarity scores, and penalty.
 The mechanics ([similarity.ts](worker/src/utilities/similarity.ts)): entry text is
 keyword-stripped and normalized, embedded with the pinned model, and a pair is a **hard
 near-duplicate** only if it clears _both_ the cosine and lexical thresholds. Duplicates
-cluster together; within a cluster the earliest entry (by snapshot timestamp, then id) keeps
-full originality credit, and each later member loses originality credit up to the configured
-`hardPoints`, capped at its own mean originality score — the penalty subtracted in Check 4.
+cluster together; within a cluster the earliest entry (by precedence timestamp — last-edit
+time, equal to publish time when never edited — then id) keeps full originality credit, and
+each later member loses originality credit up to the configured `hardPoints`, capped at its
+own mean originality score — the penalty subtracted in Check 4. Precedence follows the edit
+time, not the publish time, so a placeholder posted early and edited into a copy of a later
+entry cannot claim to be the originator.
 
 Because embeddings come from a hosted model, exact replay of the vectors is only possible
 when the contest was run with `--store-vectors` (the archived vectors are then part of the

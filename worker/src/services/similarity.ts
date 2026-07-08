@@ -15,7 +15,7 @@ import {
 
 const INSERT_CHUNK = 500;
 
-type EligibleEntry = { id: string; text: string; publishedAt: Date };
+type EligibleEntry = { id: string; text: string; updatedAt: Date };
 
 type SimilarityReport = {
 	skipped: false;
@@ -40,7 +40,7 @@ const loadContest = async (contestId: string) => {
 const loadEligibleEntries = (contestId: string): Promise<EligibleEntry[]> =>
 	db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
-		columns: { id: true, text: true, publishedAt: true }
+		columns: { id: true, text: true, updatedAt: true }
 	});
 
 const loadMeanOriginality = async (
@@ -121,7 +121,7 @@ export const clusterContest = async (
 			target.config.similarity.hash,
 			entries.map((entry) => ({
 				id: entry.id,
-				publishedAt: entry.publishedAt,
+				precedenceAt: entry.updatedAt,
 				text: entry.text,
 				meanOriginality: meanOriginality.get(entry.id) ?? 0
 			}))
@@ -142,7 +142,7 @@ export const clusterContest = async (
 
 			return {
 				id: entry.id,
-				publishedAt: entry.publishedAt,
+				precedenceAt: entry.updatedAt,
 				vector: item.vector,
 				shingleSet: shingles(entry.text)
 			};

@@ -11,7 +11,31 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — Refusal handling: unscorable entries & bracket abstention
+## Current — Precedence reset-on-edit: closing the timestamp-sniping hole
+
+The near-duplicate pass and the §7.6 tie-break both decided "who came first" by YouTube's
+`publishedAt`, while the rules allow free editing until the cutoff. Those two facts combined
+into a reliable exploit: post a minimal placeholder in hour one, wait for the field's best
+comment, edit the placeholder into a near-copy on day six — and the clustering pass would
+have handed the copier full originality credit and pushed the penalty (plus every tie-break)
+onto the true author, likely ranking the copy _above_ the original.
+
+The fix is a single concept applied everywhere order matters: an entry's **precedence
+timestamp** is its `updatedAt` — the last-edit time, identical to `publishedAt` when the
+comment was never touched. Editing resets your place in line; not editing costs nothing.
+Clustering order, the similarity-input fingerprint payload, and the ranking tie-break (worker
+and the web's hand-mirrored copy) all switched from `publishedAt` to it, and rules.md now
+carries a loud §2 warning, because the rule has one sharp edge the API makes unavoidable:
+YouTube exposes no revision history, so a typo fix after being copied genuinely hands the
+copier precedence. That failure needs the victim's voluntary edit; the old one needed only
+the attacker's. A stronger fix — interim captures during the entry week to build our own
+revision history — is recorded under "Not yet done."
+
+Note: the fingerprint payload key changed (`publishedAt` → `precedenceAt`), so this must not
+be deployed mid-contest — an in-flight contest's stored similarity fingerprint would no
+longer re-derive at `advance`.
+
+## Phase 22 — Refusal handling: unscorable entries & bracket abstention
 
 Decided what happens when a panel model _refuses_ to judge. The AI SDK's no-output error (a
 response arrived but produced nothing schema-valid) is the classifier: it separates a model
@@ -360,3 +384,5 @@ until the pass is complete for the current scored field.
 - Publishing the audit bundle for the public record (the embargo + `publish` flag exist; the
   export of entries/scores/decisions does not).
 - Deployment (Railway web service + the `ingest --due` cron).
+- Interim captures during the entry week (periodic text hashes) to establish true first
+  authorship regardless of edits — would soften reset-on-edit's typo-fix edge case.

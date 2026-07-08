@@ -11,9 +11,9 @@ import {
 
 const date = (day: number) => new Date(`2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`);
 const vector = (...values: number[]) => new Float32Array(values);
-const entry = (id: string, publishedAt: Date, text: string, values: number[]) => ({
+const entry = (id: string, precedenceAt: Date, text: string, values: number[]) => ({
 	id,
-	publishedAt,
+	precedenceAt,
 	vector: vector(...values),
 	shingleSet: shingles(text)
 });
@@ -66,6 +66,31 @@ describe("clusterField", () => {
 		expect(results.find((r) => r.entryId === "b")).toMatchObject({
 			nearestEarlierEntryId: "a",
 			originalityPenalty: 12
+		});
+	});
+
+	test("an entry edited into a copy loses precedence to the unedited original", () => {
+		// Sniping scenario: "sniper" posted day 1 but edited on day 6 (precedence = last edit);
+		// "victim" posted the original text on day 3 and never edited. The victim must keep
+		// full credit and the sniper must take the penalty despite the earlier post time.
+		const results = clusterField({
+			entries: [
+				entry("sniper", date(6), "a brilliant original sentence", [1, 0]),
+				entry("victim", date(3), "a brilliant original sentence", [1, 0])
+			],
+			meanOriginality: new Map([
+				["sniper", 20],
+				["victim", 20]
+			]),
+			cosineThreshold: 0.9,
+			lexicalThreshold: 0.8,
+			penalty: { mode: "hard_only", hardPoints: 25, softCoefficient: 0 }
+		});
+
+		expect(results.find((r) => r.entryId === "victim")?.originalityPenalty).toBe(0);
+		expect(results.find((r) => r.entryId === "sniper")).toMatchObject({
+			nearestEarlierEntryId: "victim",
+			originalityPenalty: 20
 		});
 	});
 
@@ -145,8 +170,8 @@ describe("clusterField", () => {
 	});
 
 	test("fingerprint changes with score-affecting inputs", () => {
-		const base = [{ id: "a", publishedAt: date(1), text: "same", meanOriginality: 10 }];
-		const changed = [{ id: "a", publishedAt: date(1), text: "same", meanOriginality: 11 }];
+		const base = [{ id: "a", precedenceAt: date(1), text: "same", meanOriginality: 10 }];
+		const changed = [{ id: "a", precedenceAt: date(1), text: "same", meanOriginality: 11 }];
 
 		expect(similarityInputFingerprint("h", base)).not.toBe(
 			similarityInputFingerprint("h", changed)

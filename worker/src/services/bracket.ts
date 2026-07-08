@@ -83,7 +83,7 @@ const loadRankedField = async (
 ): Promise<{ ranked: RankedEntry[]; seeded: Seeded[]; fingerprint: string }> => {
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
-		columns: { id: true, text: true, publishedAt: true }
+		columns: { id: true, text: true, updatedAt: true }
 	});
 
 	const scores = await db
@@ -119,7 +119,7 @@ const loadRankedField = async (
 			config.similarity.hash,
 			entries.map((e) => ({
 				id: e.id,
-				publishedAt: e.publishedAt,
+				precedenceAt: e.updatedAt,
 				text: e.text,
 				meanOriginality: meanOriginality.get(e.id) ?? 0
 			}))
@@ -158,7 +158,7 @@ const loadRankedField = async (
 			{
 				id: e.id,
 				text: e.text,
-				publishedAt: e.publishedAt,
+				precedenceAt: e.updatedAt,
 				rawAbsoluteScore: aggregate.absoluteScore,
 				originalityPenalty,
 				...aggregate,

@@ -11,7 +11,9 @@ export const aggregateTotals = (totals: number[]): Aggregate => {
 	};
 };
 
-type Rankable = Aggregate & { id: string; publishedAt: Date };
+// precedenceAt = last-edit time (equals publish time when never edited), so an edited entry
+// cannot win a tie against the entry it copied — same reset-on-edit rule as the similarity pass.
+type Rankable = Aggregate & { id: string; precedenceAt: Date };
 
 // §7.6 order: absolute score, then higher min-model score, then lower variance, then earliest.
 // Entry id last: a full tie (possible at YouTube's second-granularity timestamps) must still
@@ -23,7 +25,7 @@ export const rankEntries = <T extends Rankable>(entries: T[]): T[] =>
 		if (b.minModel !== a.minModel) return b.minModel - a.minModel;
 		if (a.variance !== b.variance) return a.variance - b.variance;
 
-		const byTime = a.publishedAt.getTime() - b.publishedAt.getTime();
+		const byTime = a.precedenceAt.getTime() - b.precedenceAt.getTime();
 
 		if (byTime !== 0) return byTime;
 

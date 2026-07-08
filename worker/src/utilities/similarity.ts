@@ -5,9 +5,12 @@ import type { SimilarityConfig } from "$src/utilities/contest-config";
 
 type PenaltyConfig = SimilarityConfig["penalty"];
 
+// Precedence = the entry's last-edit time (YouTube updatedAt; equals publishedAt when never
+// edited). Ordering by publish time would let a placeholder posted early and edited late claim
+// originality over the entry it copied — editing must reset an entry's place in line.
 export type PreparedSimilarityEntry = {
 	id: string;
-	publishedAt: Date;
+	precedenceAt: Date;
 	vector: Float32Array;
 	shingleSet: Set<string>;
 };
@@ -31,7 +34,7 @@ export type ClusterResult = {
 
 export type SimilarityFingerprintEntry = {
 	id: string;
-	publishedAt: Date;
+	precedenceAt: Date;
 	text: string;
 	meanOriginality: number;
 };
@@ -133,7 +136,7 @@ const roundMetric = (value: number): number => Math.round(value * 1_000_000) / 1
 
 export const clusterField = (input: ClusterInput): ClusterResult[] => {
 	const sorted = [...input.entries].sort((a, b) => {
-		const time = a.publishedAt.getTime() - b.publishedAt.getTime();
+		const time = a.precedenceAt.getTime() - b.precedenceAt.getTime();
 
 		return time === 0 ? a.id.localeCompare(b.id) : time;
 	});
@@ -231,7 +234,7 @@ export const similarityInputFingerprint = (
 	const payload = entries
 		.map((entry) => ({
 			id: entry.id,
-			publishedAt: entry.publishedAt.toISOString(),
+			precedenceAt: entry.precedenceAt.toISOString(),
 			text: entry.text,
 			meanOriginality: Math.round(entry.meanOriginality * 1_000_000) / 1_000_000
 		}))

@@ -236,7 +236,14 @@ export const loadLeaderboard = async (
 	});
 	const entries = await db.query.entry.findMany({
 		where: (e, { and, eq }) => and(eq(e.contestId, contestId), eq(e.status, "eligible")),
-		columns: { id: true, authorDisplayName: true, channelId: true, publishedAt: true, text: true }
+		columns: {
+			id: true,
+			authorDisplayName: true,
+			channelId: true,
+			publishedAt: true,
+			updatedAt: true,
+			text: true
+		}
 	});
 
 	const scoreRows = await db
@@ -287,6 +294,7 @@ export const loadLeaderboard = async (
 				author: e.authorDisplayName,
 				channelId: e.channelId,
 				publishedAt: e.publishedAt,
+				precedenceAt: e.updatedAt,
 				text: e.text,
 				byModel: perModelByEntry.get(e.id) ?? new Map<string, number>(),
 				...aggregate,
