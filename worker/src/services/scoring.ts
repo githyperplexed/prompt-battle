@@ -8,17 +8,17 @@ import {
 	type JudgeRequestSettings,
 	type PromptTemplate
 } from "$src/utilities/contest-config";
-import { auditScoreCoverage, buildWorkList, isNoOutputError } from "$src/utilities/scoring";
+import { withRefusalConfirmation } from "$src/utilities/judge";
+import {
+	auditScoreCoverage,
+	buildWorkList,
+	exceedsUnscorableGuardrail
+} from "$src/utilities/scoring";
 import { scoreEntry } from "$src/services/judge";
 import { withContestLock } from "$src/services/locks";
 
 // ≤10 in flight, and a new request started at most every 200ms (5 req/s).
 const limiter = new Bottleneck({ maxConcurrent: 10, minTime: 200 });
-
-// A model that returns no schema-valid output this many times in a row for one entry is treated
-// as a genuine refusal (the entry becomes unscorable), not a one-off fluke. Transient/network
-// failures never reach this loop — they rethrow on the first attempt and stay retryable.
-const REFUSAL_CONFIRMATIONS = 3;
 
 type Entry = { id: string; text: string };
 type Model = ContestConfig["panel"][number];
@@ -60,54 +60,44 @@ const scoreAndStore = async (
 	prompt: PromptTemplate,
 	requestSettings: JudgeRequestSettings
 ): Promise<ScoreOutcome> => {
-	let lastDetail = "";
+	const outcome = await withRefusalConfirmation(() =>
+		scoreEntry(model.slug, item.text, prompt, requestSettings, {
+			functionId: "score-entry",
+			metadata: { contestId, entryId: item.id, modelId: model.id }
+		})
+	);
 
-	// A no-output error repeats deterministically for a real refusal, so a few confirmations
-	// separate that from a rare fluke. Any other error type bubbles up as a transient failure.
-	for (let attempt = 1; attempt <= REFUSAL_CONFIRMATIONS; attempt += 1) {
-		try {
-			const {
-				score: result,
-				nonce,
-				audit
-			} = await scoreEntry(model.slug, item.text, prompt, requestSettings, {
-				functionId: "score-entry",
-				metadata: { contestId, entryId: item.id, modelId: model.id }
-			});
+	if (outcome.refused) return { outcome: "unscorable", detail: `${model.id}: ${outcome.detail}` };
 
-			await db
-				.insert(score)
-				.values({
-					contestId,
-					entryId: item.id,
-					modelId: model.id,
-					persuasiveness: result.persuasiveness,
-					originality: result.originality,
-					cleverness: result.cleverness,
-					execution: result.execution,
-					total: result.persuasiveness + result.originality + result.cleverness + result.execution,
-					nonce,
-					audit
-				})
-				.onConflictDoNothing();
+	const { score: result, nonce, audit } = outcome.value;
 
-			return { outcome: "scored" };
-		} catch (err) {
-			if (!isNoOutputError(err)) throw err;
+	await db
+		.insert(score)
+		.values({
+			contestId,
+			entryId: item.id,
+			modelId: model.id,
+			persuasiveness: result.persuasiveness,
+			originality: result.originality,
+			cleverness: result.cleverness,
+			execution: result.execution,
+			total: result.persuasiveness + result.originality + result.cleverness + result.execution,
+			nonce,
+			audit
+		})
+		.onConflictDoNothing();
 
-			lastDetail = err instanceof Error ? err.message : String(err);
-		}
-	}
-
-	return { outcome: "unscorable", detail: `${model.id}: ${lastDetail}` };
+	return { outcome: "scored" };
 };
 
 // Automated disqualification, so dqNote stays null (a non-null note marks a hand-issued removal).
-const markUnscorable = async (contestId: string, entryIds: Iterable<string>) => {
-	for (const entryId of entryIds) {
+// The machine-recorded justification — which model(s) refused and the final error — goes in
+// dqEvidence so it outlives telemetry retention.
+const markUnscorable = async (contestId: string, unscorable: Map<string, string[]>) => {
+	for (const [entryId, details] of unscorable) {
 		await db
 			.update(entry)
-			.set({ status: "disqualified", dqReason: "unscorable" })
+			.set({ status: "disqualified", dqReason: "unscorable", dqEvidence: details.join("; ") })
 			.where(
 				and(eq(entry.contestId, contestId), eq(entry.id, entryId), eq(entry.status, "eligible"))
 			);
@@ -122,7 +112,7 @@ const runScoring = async (
 ) => {
 	let completed = 0;
 	let failed = 0;
-	const unscorable = new Map<string, string>();
+	const unscorable = new Map<string, string[]>();
 
 	await Promise.all(
 		work.map((item) =>
@@ -136,8 +126,13 @@ const runScoring = async (
 						requestSettings
 					);
 
-					if (result.outcome === "scored") completed += 1;
-					else unscorable.set(item.entry.id, result.detail);
+					if (result.outcome === "scored") {
+						completed += 1;
+					} else {
+						const details = unscorable.get(item.entry.id) ?? [];
+						details.push(result.detail);
+						unscorable.set(item.entry.id, details);
+					}
 				} catch (err) {
 					failed += 1;
 					const message = err instanceof Error ? err.message : String(err);
@@ -152,7 +147,10 @@ const runScoring = async (
 	return { completed, failed, unscorable };
 };
 
-export const scoreContest = async (contestId: string) =>
+export const scoreContest = async (
+	contestId: string,
+	{ allowUnscorable }: { allowUnscorable?: number } = {}
+) =>
 	withContestLock(contestId, async () => {
 		const target = await loadContest(contestId);
 
@@ -174,11 +172,17 @@ export const scoreContest = async (contestId: string) =>
 			target.config.judge.requestSettings
 		);
 
-		if (unscorable.size > 0) await markUnscorable(contestId, unscorable.keys());
+		// Guardrail: refusals this widespread are a systemic failure, not entry-level evidence, so
+		// the run disqualifies nothing — entries stay eligible, every refused pair stays retryable,
+		// and the coverage gate below keeps the contest in `scoring`. An operator who reviewed the
+		// reported refusals can raise the threshold for this run via allowUnscorable.
+		const suppressed = exceedsUnscorableGuardrail(unscorable.size, entries.length, allowUnscorable);
+
+		if (!suppressed && unscorable.size > 0) await markUnscorable(contestId, unscorable);
 
 		// Unscorable entries are now disqualified, so they are excluded from the coverage that
 		// gates the `scored` flip — one entry a model refuses can't hold the contest open.
-		const remaining = entries.filter((e) => !unscorable.has(e.id));
+		const remaining = suppressed ? entries : entries.filter((e) => !unscorable.has(e.id));
 		const coverage = auditScoreCoverage(
 			remaining,
 			target.config.panel,
@@ -192,7 +196,12 @@ export const scoreContest = async (contestId: string) =>
 			total: work.length,
 			completed,
 			failed,
-			unscorable: [...unscorable.entries()].map(([entryId, detail]) => ({ entryId, detail })),
+			eligible: entries.length,
+			unscorable: [...unscorable.entries()].map(([entryId, details]) => ({
+				entryId,
+				detail: details.join("; ")
+			})),
+			unscorableSuppressed: suppressed,
 			complete: coverage.complete,
 			missing: coverage.missing,
 			unexpected: coverage.unexpected

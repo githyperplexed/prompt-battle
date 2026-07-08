@@ -21,6 +21,7 @@ import {
 	seedOrder,
 	tallyMatchup
 } from "$src/utilities/bracket";
+import { withRefusalConfirmation } from "$src/utilities/judge";
 import { aggregateTotals, rankEntries } from "$src/utilities/ranking";
 import { similarityInputFingerprint } from "$src/utilities/similarity";
 import { compareEntries } from "$src/services/judge";
@@ -35,6 +36,15 @@ type Seeded = {
 	rank: number;
 	absoluteScore: number;
 	text: string;
+};
+
+// A comparison a model refused to answer (confirmed no-output), surfaced in the run report.
+type MatchupRefusal = {
+	round: number;
+	slot: number;
+	modelId: string;
+	orderSwapped: boolean;
+	detail: string;
 };
 
 type RankedEntry = {
@@ -273,7 +283,8 @@ const resolveMatchup = async (
 	b: string | null,
 	seedOfId: Map<string, number>,
 	textOfId: Map<string, string>,
-	config: ContestConfig
+	config: ContestConfig,
+	refusals: MatchupRefusal[]
 ): Promise<string | null> => {
 	// A bye: the present side auto-advances with no matchup row or comparisons.
 	if (!a) return b;
@@ -311,26 +322,48 @@ const resolveMatchup = async (
 			.map((orderSwapped) => ({ model: m, orderSwapped }))
 	);
 
+	const abstained = new Set<string>();
+
 	const fresh = await Promise.all(
 		pending.map((p) =>
 			limiter.schedule(async () => {
 				const [first, second] = p.orderSwapped ? [textB, textA] : [textA, textB];
-				const { comparison: verdict, audit } = await compareEntries(
-					p.model.slug,
-					first,
-					second,
-					config.prompts.compare,
-					config.judge.requestSettings,
-					{
-						functionId: "compare-entries",
-						metadata: {
-							contestId,
-							matchupId: row.id,
-							modelId: p.model.id,
-							orderSwapped: p.orderSwapped
+				const outcome = await withRefusalConfirmation(() =>
+					compareEntries(
+						p.model.slug,
+						first,
+						second,
+						config.prompts.compare,
+						config.judge.requestSettings,
+						{
+							functionId: "compare-entries",
+							metadata: {
+								contestId,
+								matchupId: row.id,
+								modelId: p.model.id,
+								orderSwapped: p.orderSwapped
+							}
 						}
-					}
+					)
 				);
+
+				// A confirmed refusal makes this model abstain for the whole matchup; the tally below
+				// falls back to the remaining models. No comparison row is stored, so the abstention is
+				// visible in the published record as the model's missing vote.
+				if (outcome.refused) {
+					abstained.add(p.model.id);
+					refusals.push({
+						round,
+						slot,
+						modelId: p.model.id,
+						orderSwapped: p.orderSwapped,
+						detail: outcome.detail
+					});
+
+					return null;
+				}
+
+				const { comparison: verdict, audit } = outcome.value;
 
 				// "A" is whichever entry was presented first; map back to the canonical entry.
 				const firstEntry = p.orderSwapped ? entryB : entryA;
@@ -354,10 +387,14 @@ const resolveMatchup = async (
 		)
 	);
 
+	// A model that refused either ordering can't satisfy the both-ways rule (§7.5), so every one
+	// of its votes for this matchup is discarded — including a vote recorded for the other
+	// ordering. The majority of the remaining models decides; a full deadlock still resolves to
+	// the higher seed inside tallyMatchup.
 	const votes = [
 		...recorded.map((c) => ({ modelId: c.modelId, chosenEntryId: c.chosenEntryId })),
-		...fresh
-	];
+		...fresh.filter((v): v is { modelId: string; chosenEntryId: string } => v !== null)
+	].filter((vote) => !abstained.has(vote.modelId));
 
 	const winner = tallyMatchup(entryA, entryB, votes);
 	assertMatchupEntry(entryA, entryB, winner, "Resolved winnerId");
@@ -375,6 +412,7 @@ const runBracket = async (contestId: string, seeded: Seeded[], config: ContestCo
 
 	let slots: (string | null)[] = order.map((seed) => idBySeed.get(seed) ?? null);
 	const eliminatedRound = new Map<string, number>();
+	const refusals: MatchupRefusal[] = [];
 	let round = 1;
 
 	while (slots.length > 1) {
@@ -386,7 +424,7 @@ const runBracket = async (contestId: string, seeded: Seeded[], config: ContestCo
 
 		const winners = await Promise.all(
 			pairs.map((p) =>
-				resolveMatchup(contestId, round, p.slot, p.a, p.b, seedOfId, textOfId, config)
+				resolveMatchup(contestId, round, p.slot, p.a, p.b, seedOfId, textOfId, config, refusals)
 			)
 		);
 
@@ -400,7 +438,7 @@ const runBracket = async (contestId: string, seeded: Seeded[], config: ContestCo
 		round += 1;
 	}
 
-	return { champion: slots[0] ?? null, eliminatedRound, rounds: round - 1 };
+	return { champion: slots[0] ?? null, eliminatedRound, rounds: round - 1, refusals };
 };
 
 const finalize = async (
@@ -471,11 +509,22 @@ export const advanceContest = async (contestId: string) =>
 		await persistRankings(ranked);
 
 		try {
-			const { champion, eliminatedRound, rounds } = await runBracket(contestId, seeded, config);
+			const { champion, eliminatedRound, rounds, refusals } = await runBracket(
+				contestId,
+				seeded,
+				config
+			);
 
 			await finalize(contestId, champion, eliminatedRound, rounds);
 
-			return { skipped: false as const, entrants: seeded.length, rounds, champion, fingerprint };
+			return {
+				skipped: false as const,
+				entrants: seeded.length,
+				rounds,
+				champion,
+				fingerprint,
+				refusals
+			};
 		} finally {
 			await limiter.disconnect();
 		}

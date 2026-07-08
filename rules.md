@@ -174,6 +174,10 @@ bounded amount of originality credit.
 - **Each matchup is head-to-head.** Every model compares the two entries **both ways**
   (A-first and B-first) to cancel position bias; a model's vote counts only if it picks
   the same entry regardless of order. The **majority of model votes wins** the matchup.
+- **A refusing model abstains.** If a model repeatedly refuses to return a verdict for a
+  matchup, all of its votes for that matchup are discarded — the same treatment as an
+  order-inconsistent vote, since the both-ways check can no longer be satisfied. The
+  majority of the remaining models decides.
 - **Pairwise ties** (a deadlock) are broken in favor of the **higher seed**.
 
 The top-64 cut is a fixed engine constant (see `worker/src/constants.ts`).

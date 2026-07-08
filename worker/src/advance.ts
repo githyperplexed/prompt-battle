@@ -25,4 +25,17 @@ export const runAdvance = async () => {
 	console.log(`  rounds:      ${result.rounds}`);
 	console.log(`  champion:    ${result.champion ?? "(none)"}`);
 	console.log(`  fingerprint: ${result.fingerprint}`);
+
+	if (result.refusals.length > 0) {
+		console.log(
+			`  refusals:    ${result.refusals.length} comparison(s) refused — that model's votes were` +
+				" discarded for the affected matchup"
+		);
+
+		for (const r of result.refusals) {
+			console.log(
+				`      r${r.round} s${r.slot} ${r.modelId}${r.orderSwapped ? " (swapped order)" : ""} — ${r.detail}`
+			);
+		}
+	}
 };

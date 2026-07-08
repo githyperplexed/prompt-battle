@@ -4,7 +4,7 @@ import { scoreContest } from "$src/services/scoring";
 
 export const runScore = async () => {
 	const { values } = parseArgs({
-		options: { contest: { type: "string" } },
+		options: { contest: { type: "string" }, "allow-unscorable": { type: "string" } },
 		allowPositionals: true,
 		strict: true
 	});
@@ -13,7 +13,19 @@ export const runScore = async () => {
 
 	if (!contestId) throw new Error("--contest <id> is required");
 
-	const result = await scoreContest(contestId);
+	// Single-run guardrail override: after reviewing a suppressed run's reported refusals, the
+	// operator can accept up to this many unscorable disqualifications.
+	let allowUnscorable: number | undefined;
+
+	if (values["allow-unscorable"] !== undefined) {
+		allowUnscorable = Number(values["allow-unscorable"]);
+
+		if (!Number.isInteger(allowUnscorable) || allowUnscorable < 0) {
+			throw new Error("--allow-unscorable must be a non-negative integer");
+		}
+	}
+
+	const result = await scoreContest(contestId, { allowUnscorable });
 
 	if (result.skipped) {
 		console.log(`Contest ${contestId} is not ready for scoring (status: ${result.status}).`);
@@ -26,9 +38,25 @@ export const runScore = async () => {
 	console.log(`  failed:    ${result.failed}`);
 
 	if (result.unscorable.length > 0) {
-		console.log(
-			`  unscorable: ${result.unscorable.length} (disqualified — a panel model refused to score them)`
-		);
+		if (result.unscorableSuppressed) {
+			console.error(
+				`  unscorable: ${result.unscorable.length} of ${result.eligible} eligible entries — ` +
+					"guardrail tripped, nothing was disqualified."
+			);
+			console.error(
+				"      Refusals this widespread point to a systemic cause (judge prompt, schema, token" +
+					" limit, provider), not entry content. Fix the cause and re-run; every pair is still" +
+					" retryable."
+			);
+			console.error(
+				"      If you review the entries below and judge every refusal genuine, re-run with" +
+					` --allow-unscorable ${result.unscorable.length} to accept the disqualifications.`
+			);
+		} else {
+			console.log(
+				`  unscorable: ${result.unscorable.length} (disqualified — a panel model refused to score them)`
+			);
+		}
 
 		for (const { entryId, detail } of result.unscorable) {
 			console.log(`      ${entryId} — ${detail}`);

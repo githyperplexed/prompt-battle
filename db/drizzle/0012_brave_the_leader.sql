@@ -1,0 +1,1 @@
+ALTER TABLE "entry" ADD COLUMN "dq_evidence" text;

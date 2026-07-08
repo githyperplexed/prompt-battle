@@ -7,7 +7,9 @@ export const DQ_REASON_LABELS: Record<string, string> = {
 	affiliated: "Affiliated account",
 	tos: "Removed for content policy",
 	edited_after_cutoff: "Edited after cutoff",
-	deleted: "Deleted"
+	over_cap: "Over the entry cap",
+	deleted: "Deleted",
+	unscorable: "Unscorable (a panel model refused)"
 };
 
 export const dqLabel = (reason: string): string => DQ_REASON_LABELS[reason] ?? reason;

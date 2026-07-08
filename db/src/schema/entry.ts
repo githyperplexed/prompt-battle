@@ -50,6 +50,10 @@ export const entry = pgTable(
 		// Operator justification for a manual disqualification (the `dq` command). Null for
 		// automated/ingest-time DQs, so a non-null note marks a hand-issued, human-judged removal.
 		dqNote: text(),
+		// Machine-recorded justification for an automated disqualification — e.g. which panel
+		// model(s) refused an `unscorable` entry and the final error — so the evidence survives
+		// telemetry retention. Never operator-authored; that distinction stays with dqNote.
+		dqEvidence: text(),
 		absoluteScore: real(),
 		rawAbsoluteScore: real(),
 		originalityPenalty: real(),

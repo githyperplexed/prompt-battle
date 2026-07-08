@@ -214,7 +214,22 @@ entry several times running is treated as a genuine refusal (e.g. content that t
 safety filter) — the entry is disqualified as `unscorable` and dropped from the ranked field, so
 one un-judgeable entry can't hold the contest in `scoring` forever. The run reports each entry it
 marked and which model refused; these are excluded from the coverage that gates the `scored` flip.
-Ingest moderation removes most such content up front, so `unscorable` should be rare.
+The refusing model(s) and final error are stored on the entry as `dq_evidence`, so the
+justification survives telemetry retention. Ingest moderation removes most such content up front,
+so `unscorable` should be rare.
+
+**Refusal guardrail.** Refusals are entry-level evidence only while they are rare. If one run
+confirms refusals for more than max(5, 1% of the eligible field) — the floor keeps a small field
+from tripping on a handful of genuine refusals; the share scales the allowance up for a large one
+— the pattern points at a systemic cause: a broken judge prompt or schema, a too-low token cap, a
+provider output regression. In that case the run disqualifies **nothing**: every entry stays
+eligible, every refused pair stays retryable, the contest stays in `scoring`, and the command
+reports the suppression and exits nonzero. Fix the cause and re-run. If instead you review the
+reported entries and judge every refusal genuine, re-run with `--allow-unscorable <n>` — it
+replaces the guardrail threshold for that single run, so the reviewed disqualifications go
+through while a surprise regression on the next run is still caught. The guardrail can never
+strand a contest: suppression only defers the disqualifications until a re-run (fixed cause or
+explicit allowance) accepts them.
 
 ### 4. Cluster near-duplicates ✅
 
@@ -255,6 +270,15 @@ Database constraints keep score and matchup rows inside their contest boundary. 
 asserts each stored or fresh bracket choice is one of that matchup's two entries before it can
 resume or persist a winner. Denormalized comparison-pair database triggers are intentionally
 deferred while comparison writes remain confined to this worker path.
+
+**Refusals during matchups.** A model that repeatedly returns no valid verdict for a comparison
+(the same confirmed-refusal check as scoring) abstains: all of its votes for that matchup are
+discarded — a vote only counts when the model picks the same entry in both orderings, and a
+refusal makes that impossible — the remaining models' majority decides, and a full deadlock still
+goes to the higher seed. No comparison row is stored for the refusal, so the abstention is visible
+in the published record as that model's missing vote; the run report lists every abstention with
+the refusing model and error. Transient failures still throw and stay retryable on the next
+`advance`.
 
 #### Recovering from bracket fingerprint mismatch
 

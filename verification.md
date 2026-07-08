@@ -107,8 +107,9 @@ Two reasons are judgment calls rather than recomputable: `tos` (content moderati
 operator-issued removals — these carry a stored `dq_note` justification) and `affiliated`
 (owner/moderator accounts). A third, `unscorable`, is not a rule judgment but a scoring-time
 outcome: a panel model repeatedly returned no valid score for the entry, so it was archived out
-of the ranked field. It is visible in the published record as the entry having no score row from
-the refusing model. The reference implementation for everything mechanical is
+of the ranked field. The refusing model(s) and final error are stored on the entry as
+`dq_evidence`, and it is also visible in the published record as the entry having no score row
+from the refusing model. The reference implementation for everything mechanical is
 [validation.ts](worker/src/utilities/validation.ts) and
 [snapshot.ts](worker/src/utilities/snapshot.ts), which are unit-tested in `worker/test/`.
 

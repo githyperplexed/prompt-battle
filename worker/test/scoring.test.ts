@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { auditScoreCoverage, isNoOutputError } from "../src/utilities/scoring";
+import { auditScoreCoverage, exceedsUnscorableGuardrail } from "../src/utilities/scoring";
 
 const entries = [{ id: "entry-a" }, { id: "entry-b" }];
 const models = [{ id: "model-1" }, { id: "model-2" }, { id: "model-3" }];
@@ -46,19 +46,34 @@ describe("auditScoreCoverage", () => {
 	});
 });
 
-describe("isNoOutputError", () => {
-	test("recognizes the AI SDK no-output error by name", () => {
-		const err = Object.assign(new Error("No output generated."), {
-			name: "AI_NoOutputGeneratedError"
-		});
-
-		expect(isNoOutputError(err)).toBe(true);
+describe("exceedsUnscorableGuardrail", () => {
+	test("allows rare refusals in a small field", () => {
+		expect(exceedsUnscorableGuardrail(0, 100)).toBe(false);
+		expect(exceedsUnscorableGuardrail(1, 100)).toBe(false);
+		expect(exceedsUnscorableGuardrail(5, 100)).toBe(false);
 	});
 
-	test("does not treat transient errors as refusals", () => {
-		expect(isNoOutputError(new Error("fetch failed"))).toBe(false);
-		expect(isNoOutputError(Object.assign(new Error("429"), { name: "APICallError" }))).toBe(false);
-		expect(isNoOutputError(null)).toBe(false);
-		expect(isNoOutputError(undefined)).toBe(false);
+	test("trips past the absolute floor in a small field", () => {
+		expect(exceedsUnscorableGuardrail(6, 100)).toBe(true);
+	});
+
+	test("scales with the field size past the floor", () => {
+		expect(exceedsUnscorableGuardrail(100, 10000)).toBe(false);
+		expect(exceedsUnscorableGuardrail(101, 10000)).toBe(true);
+	});
+
+	test("uses the floor when the share of a tiny field rounds below it", () => {
+		expect(exceedsUnscorableGuardrail(5, 10)).toBe(false);
+		expect(exceedsUnscorableGuardrail(6, 10)).toBe(true);
+	});
+
+	test("an operator allowance replaces the computed threshold", () => {
+		expect(exceedsUnscorableGuardrail(12, 100, 12)).toBe(false);
+		expect(exceedsUnscorableGuardrail(13, 100, 12)).toBe(true);
+	});
+
+	test("an allowance of zero suppresses every auto-disqualification", () => {
+		expect(exceedsUnscorableGuardrail(1, 100, 0)).toBe(true);
+		expect(exceedsUnscorableGuardrail(0, 100, 0)).toBe(false);
 	});
 });
