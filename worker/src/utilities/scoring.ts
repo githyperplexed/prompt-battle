@@ -1,3 +1,13 @@
+// A judge call that produces no schema-valid output (the AI SDK's NoOutputGeneratedError) is a
+// content-driven refusal, not a transient network failure — the model declined rather than the
+// request failing to reach it. Only this class of failure makes an entry unscorable; anything
+// else (timeouts, 429s, 5xx) stays retryable and must not disqualify an innocent entry.
+export const isNoOutputError = (err: unknown): boolean => {
+	const name = (err as { name?: unknown } | null)?.name;
+
+	return name === "AI_NoOutputGeneratedError" || name === "NoOutputGeneratedError";
+};
+
 // Cross-product of entries × models, minus the pairs already scored.
 export const buildWorkList = <E extends { id: string }, M extends { id: string }>(
 	entries: E[],

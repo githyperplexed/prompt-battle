@@ -208,6 +208,14 @@ Individual failures leave the contest in `scoring` and make the command exit non
 until every eligible entry has exactly one score from each panel model and the contest reaches
 `scored`.
 
+**Transient vs. refusal failures.** A network/timeout/`429`/`5xx` failure is transient: it stays
+retryable and is what a re-run fills in. A panel model that returns _no valid score_ for the same
+entry several times running is treated as a genuine refusal (e.g. content that trips a provider
+safety filter) — the entry is disqualified as `unscorable` and dropped from the ranked field, so
+one un-judgeable entry can't hold the contest in `scoring` forever. The run reports each entry it
+marked and which model refused; these are excluded from the coverage that gates the `scored` flip.
+Ingest moderation removes most such content up front, so `unscorable` should be rare.
+
 ### 4. Cluster near-duplicates ✅
 
 ```

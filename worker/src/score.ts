@@ -25,6 +25,16 @@ export const runScore = async () => {
 	console.log(`  completed: ${result.completed}`);
 	console.log(`  failed:    ${result.failed}`);
 
+	if (result.unscorable.length > 0) {
+		console.log(
+			`  unscorable: ${result.unscorable.length} (disqualified — a panel model refused to score them)`
+		);
+
+		for (const { entryId, detail } of result.unscorable) {
+			console.log(`      ${entryId} — ${detail}`);
+		}
+	}
+
 	if (!result.complete) {
 		console.error(
 			"Scoring is incomplete; " + result.missing.length + " expected score(s) are missing."

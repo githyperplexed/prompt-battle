@@ -1,0 +1,1 @@
+ALTER TYPE "public"."dq_reason" ADD VALUE 'unscorable';

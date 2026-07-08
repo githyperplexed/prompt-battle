@@ -25,7 +25,8 @@ export const dqReason = pgEnum("dq_reason", [
 	"tos",
 	"edited_after_cutoff",
 	"over_cap",
-	"deleted"
+	"deleted",
+	"unscorable"
 ]);
 
 export const entry = pgTable(

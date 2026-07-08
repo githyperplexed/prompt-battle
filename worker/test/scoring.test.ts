@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { auditScoreCoverage } from "../src/utilities/scoring";
+import { auditScoreCoverage, isNoOutputError } from "../src/utilities/scoring";
 
 const entries = [{ id: "entry-a" }, { id: "entry-b" }];
 const models = [{ id: "model-1" }, { id: "model-2" }, { id: "model-3" }];
@@ -43,5 +43,22 @@ describe("auditScoreCoverage", () => {
 			missing: [],
 			unexpected: []
 		});
+	});
+});
+
+describe("isNoOutputError", () => {
+	test("recognizes the AI SDK no-output error by name", () => {
+		const err = Object.assign(new Error("No output generated."), {
+			name: "AI_NoOutputGeneratedError"
+		});
+
+		expect(isNoOutputError(err)).toBe(true);
+	});
+
+	test("does not treat transient errors as refusals", () => {
+		expect(isNoOutputError(new Error("fetch failed"))).toBe(false);
+		expect(isNoOutputError(Object.assign(new Error("429"), { name: "APICallError" }))).toBe(false);
+		expect(isNoOutputError(null)).toBe(false);
+		expect(isNoOutputError(undefined)).toBe(false);
 	});
 });

@@ -68,6 +68,9 @@ An entry is removed (before or during judging) if it:
 - Is deleted before it can be captured.
 - Arrives after the first 10,000 eligible entries (the max field size, §3). It is archived
   in the public record as `over_cap` but is not judged.
+- Cannot be scored because a panel model repeatedly refuses to return a score for it (for
+  example, content that trips a model's safety filter). After confirmation it is archived as
+  `unscorable` and excluded from ranking, so one un-judgeable entry can't stall the contest.
 
 Disqualification is based only on the captured text, YouTube timestamps, and the rules above.
 

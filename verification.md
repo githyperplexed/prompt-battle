@@ -105,7 +105,10 @@ mechanical rules from [rules.md](rules.md) §3 to any entry and confirm its stat
 
 Two reasons are judgment calls rather than recomputable: `tos` (content moderation, plus any
 operator-issued removals — these carry a stored `dq_note` justification) and `affiliated`
-(owner/moderator accounts). The reference implementation for everything mechanical is
+(owner/moderator accounts). A third, `unscorable`, is not a rule judgment but a scoring-time
+outcome: a panel model repeatedly returned no valid score for the entry, so it was archived out
+of the ranked field. It is visible in the published record as the entry having no score row from
+the refusing model. The reference implementation for everything mechanical is
 [validation.ts](worker/src/utilities/validation.ts) and
 [snapshot.ts](worker/src/utilities/snapshot.ts), which are unit-tested in `worker/test/`.
 
