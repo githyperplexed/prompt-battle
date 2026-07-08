@@ -11,7 +11,39 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — Full-repo audit & pre-launch fixes
+## Current — Refusal handling: unscorable entries & bracket abstention
+
+Decided what happens when a panel model _refuses_ to judge. The AI SDK's no-output error (a
+response arrived but produced nothing schema-valid) is the classifier: it separates a model
+declining from a request never succeeding, so transient failures (network/429/5xx) stay
+retryable while a refusal confirmed a few times running is treated as deterministic. A scoring
+refusal disqualifies the entry as `unscorable` and excludes it from the coverage gate — the
+alternative (ranking on a partial panel, or imputing a score) would bias the field, and one
+un-judgeable entry must not hold the contest in `scoring` forever.
+
+Review of the first cut surfaced three gaps, all fixed in the follow-up:
+
+- **Mass-DQ guardrail.** The refusal signal is only entry-level evidence while refusals are
+  rare — a broken judge prompt, schema, or token cap makes _every_ entry refuse, and the naive
+  path would have disqualified the whole field and flipped the contest to `scored` with nobody
+  in it. A run that confirms refusals for more than max(5, 1% of the field) now disqualifies
+  nothing and leaves every pair retryable; `score --allow-unscorable <n>` accepts reviewed
+  disqualifications for a single run (needed because manual `dq` is locked to pre-scoring, so
+  a tripped guardrail previously had no clean exit).
+- **Durable evidence.** The refusing model(s) and final error persist on the entry as
+  `dq_evidence` — telemetry retention is 30 days, and a public-verifiability posture can't
+  have DQ justifications evaporating. `dq_note` stays human-only.
+- **Bracket abstention.** The same failure existed unhandled in matchups. A model that refuses
+  a comparison abstains for the whole matchup: _all_ its votes there are discarded — counting
+  the surviving ordering would quietly break the both-ways position-bias rule — the remaining
+  majority decides, and a full deadlock still goes to the higher seed. No comparison row is
+  stored, so the abstention is visible in the published record as the model's missing vote.
+
+Synced rules.md (§3 `unscorable`, §7.5 abstention), the runbook (transient-vs-refusal,
+guardrail, matchup refusals), and verification.md (`unscorable` as a scoring-time outcome with
+stored evidence, not a rule judgment).
+
+## Phase 21 — Full-repo audit & pre-launch fixes
 
 Ran a structured audit of the whole engine — rules ↔ code adherence, every CLI command, and
 runbook accuracy — then fixed everything it surfaced. The headline finding: the "video-specific"
