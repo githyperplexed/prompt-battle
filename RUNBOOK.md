@@ -18,13 +18,13 @@ prompts see [prompts/](prompts/); for how a result is independently audited see
     needed by `ingest` and `cluster`. ✅
   - `EXCLUDED_CHANNELS` — optional; comma-separated `@handles` / `UC…` ids to exclude (owner, mods).
   - `LATITUDE_API_KEY` / `LATITUDE_PROJECT_SLUG` — optional; both enable Latitude AI telemetry for
-    `score`, `advance`, and `smoke` (see [Telemetry](#telemetry-optional)). Absent → tracing is off.
+    `score`, `advance`, `smoke`, and `judge` (see [Telemetry](#telemetry-optional)). Absent → tracing is off.
 - **Database migrated:** `bun run db:migrate`. (Schema changes: the maintainer runs
   `db:generate` + `db:migrate` — do not run them automatically.)
 
 ## Telemetry (optional)
 
-`score`, `advance`, and `smoke` emit OpenTelemetry traces to [Latitude](https://latitude.so) for
+`score`, `advance`, `smoke`, and `judge` emit OpenTelemetry traces to [Latitude](https://latitude.so) for
 live cost/latency/trace visibility while running batches and tuning judge prompts. It is **opt-in
 and credentials-based**: set both `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` to enable; with
 either absent, the Vercel AI SDK falls back to a no-op tracer and inference is unchanged. The worker
@@ -367,6 +367,22 @@ comparison — **4 paid OpenRouter calls** — printing each call's output, late
 reads and writes no contest data, but needs `DATABASE_URL` (client import) and
 `OPENROUTER_API_KEY`, and emits Latitude traces when telemetry is configured. Use it to
 sanity-check credentials, the panel, and prompt plumbing before a costly scoring run.
+
+## Judge a draft entry (optional)
+
+```
+bun run worker judge --text "the draft comment"
+bun run worker judge --file drafts/entry.md
+```
+
+Scores one arbitrary text with all three default-panel models — **3 paid OpenRouter calls**
+per run — printing each model's four rubric scores, its total, and the mean (the raw absolute
+score a contest would assign the same text). A drafting/testing aid, not a pipeline step: it
+uses the repo defaults (`config.json`, `prompts/`), never a frozen contest config, and reads
+and writes no contest data. Same requirements as `smoke` (`DATABASE_URL`, `OPENROUTER_API_KEY`,
+optional Latitude telemetry). Length outside the eligible 50–3,000 range only warns, and no
+keyword or URL checks run — it judges exactly the text you give it. Scores are sampled, not
+deterministic: expect a few points of drift between runs of identical text.
 
 ## Notes
 

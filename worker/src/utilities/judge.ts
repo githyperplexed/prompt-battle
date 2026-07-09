@@ -42,6 +42,19 @@ export const withRefusalConfirmation = async <T>(
 	return { refused: true, detail: lastDetail };
 };
 
+// OpenRouter reports cost (USD) under providerMetadata.openrouter.usage.cost, but only when usage
+// accounting is enabled on the request; tokens on `usage` are always present. Returns null when the
+// figure is absent so the caller can fall back to the dashboard.
+export const judgeCallCost = (audit: { providerMetadata?: unknown }): number | null => {
+	const meta = audit.providerMetadata as { openrouter?: { usage?: { cost?: number } } } | undefined;
+	const cost = meta?.openrouter?.usage?.cost;
+
+	return typeof cost === "number" ? cost : null;
+};
+
+export const formatJudgeCost = (cost: number | null): string =>
+	cost === null ? "not reported (see OpenRouter dashboard)" : `$${cost.toFixed(6)}`;
+
 // The judge instructions are identical on every call, so they go in a cache-marked system
 // message (providers that support it reuse the prefix). The messages carry our own trusted
 // system prompt — not user input — so allowSystemInMessages is safe at the call sites.

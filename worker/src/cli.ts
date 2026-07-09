@@ -17,13 +17,14 @@ const COMMANDS = [
 	"delete",
 	"publish",
 	"status",
-	"smoke"
+	"smoke",
+	"judge"
 ] as const;
 type Command = (typeof COMMANDS)[number];
 
 // Only these commands make LLM calls, so only they register Latitude telemetry and pay the
 // flush-on-exit cost. The rest stay free of any tracing setup.
-const INFERENCE_COMMANDS = new Set<Command>(["score", "advance", "smoke"]);
+const INFERENCE_COMMANDS = new Set<Command>(["score", "advance", "smoke", "judge"]);
 
 const main = async () => {
 	const { positionals } = parseArgs({ allowPositionals: true, strict: false });
@@ -106,6 +107,12 @@ const main = async () => {
 				const { runSmoke } = await import("$src/smoke");
 
 				await runSmoke();
+				break;
+			}
+			case "judge": {
+				const { runJudge } = await import("$src/judge");
+
+				await runJudge();
 				break;
 			}
 			default:
