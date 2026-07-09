@@ -102,8 +102,12 @@ export const defaultSimilarityConfig: UnpinnedSimilarityConfig = {
 	embeddingModel: { slug: "openai/text-embedding-3-small" },
 	preprocessingVersion: 1,
 	embeddingDimensions: 256,
-	cosineThreshold: 0.92,
-	lexicalThreshold: 0.6,
+	// Set empirically (see CHANGELOG): a hard trip requires BOTH gates, and these sit in the
+	// measured dead zone — synonym-swapped copies stay above them until roughly every third
+	// word is rewritten (paraphrase territory, deliberately not policed), while innocent
+	// same-sentiment entries measure ≤0.51 cosine and <0.1 jaccard.
+	cosineThreshold: 0.85,
+	lexicalThreshold: 0.5,
 	penalty: { mode: "hard_only", hardPoints: 25, softCoefficient: 0 }
 };
 

@@ -11,7 +11,31 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — Precedence reset-on-edit: closing the timestamp-sniping hole
+## Current — Similarity thresholds tuned against a probed copy gradient
+
+Probed the near-duplicate gates with a planted field run through the real pipeline pieces
+(normalize → embed → cluster): an original, synonym-swapped copies at increasing cadence
+(every ~8th, ~5th, ~3rd, ~2nd word), a full AI paraphrase, and two innocent same-sentiment
+entries. Findings, at 256-dim `text-embedding-3-small`:
+
+- A hard trip requires BOTH gates, so the net is only as wide as the stricter one — and the
+  original 0.92 cosine gate was stricter than the 0.6 lexical gate for exactly the realistic
+  attack: an every-8th-word tweak kept jaccard at ~0.72 (unambiguously a copy) but dropped
+  cosine to ~0.91 and walked.
+- A full paraphrase measures ~0.71 cosine — statistically indistinguishable from the innocent
+  pair (~0.69). No threshold separates "AI rewrite of a specific entry" from "two strangers
+  with the same sentiment"; paraphrase is mechanically unpoliceable and stays permitted.
+- Innocents sit at ≤0.51 cosine and <0.1 jaccard — a wide dead zone below every copy variant.
+
+Defaults moved from 0.92/0.6 to **0.85/0.5**: all tweaked copies through every-5th-word are
+now caught (and dock correctly, transitively, with the own-originality cap), while escape now
+requires rewriting roughly every third word — by which point jaccard has collapsed to ~0.23
+and the text is a genuine paraphrase. The probe was a one-off script (deleted); it costs
+fractions of a cent in embeddings and is easy to recreate from this description if the
+embedding model ever changes. Frozen configs are untouched — new defaults apply from the next
+`create`.
+
+## Phase 23 — Precedence reset-on-edit: closing the timestamp-sniping hole
 
 The near-duplicate pass and the §7.6 tie-break both decided "who came first" by YouTube's
 `publishedAt`, while the rules allow free editing until the cutoff. Those two facts combined
