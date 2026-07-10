@@ -376,6 +376,27 @@ Publishing the exported hash somewhere you cannot edit (the reveal video's descr
 pinned comment) strengthens the anchor further — anyone can then verify the served file
 against it.
 
+### 8. Verify the record — anyone can ✅
+
+```
+bun run worker verify --file web/static/audit/<videoId>.json
+```
+
+Runs all six verification.md checks against a bundle, fully offline — **no `DATABASE_URL`, no
+API keys**, so any third party (or their agent) can clone this repo, audit the checker in
+`worker/src/utilities/verify-bundle.ts`, and run it against a downloaded bundle. It prints the
+bundle's SHA-256 first (so what-was-verified is unambiguous), then per-check pass/fail:
+config-hash integrity, the keyword commitment, mechanical eligibility of every entry, the
+recomputed ranking + seeded-field fingerprint, the originality penalties under the committed
+formula, and a full bracket replay from the recorded votes down to the champion. Exits nonzero
+on any failure, so it can gate CI or run as a post-export sanity check before the bundle
+commit.
+
+The verifier is a convenience, not the guarantee: the formulas live in verification.md, and a
+skeptic can reimplement them independently and get the same answers. The judgment-call
+disqualifications (`tos`, `affiliated`) are reported as disclosed-but-not-recomputable, per
+verification.md's Limits.
+
 ## Smoke test (optional)
 
 ```

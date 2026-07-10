@@ -3,8 +3,6 @@ import "$src/env";
 
 import { parseArgs } from "node:util";
 
-import { pool } from "@prompt-battle/db";
-
 const COMMANDS = [
 	"secret",
 	"create",
@@ -17,6 +15,7 @@ const COMMANDS = [
 	"delete",
 	"publish",
 	"export",
+	"verify",
 	"status",
 	"smoke",
 	"judge"
@@ -26,6 +25,10 @@ type Command = (typeof COMMANDS)[number];
 // Only these commands make LLM calls, so only they register Latitude telemetry and pay the
 // flush-on-exit cost. The rest stay free of any tracing setup.
 const INFERENCE_COMMANDS = new Set<Command>(["score", "advance", "smoke", "judge"]);
+
+// Commands that never open the database. `verify` must stay in this set: third parties run it
+// against a downloaded bundle with no DATABASE_URL, so the db client must never be imported.
+const OFFLINE_COMMANDS = new Set<Command>(["verify"]);
 
 const main = async () => {
 	const { positionals } = parseArgs({ allowPositionals: true, strict: false });
@@ -104,6 +107,12 @@ const main = async () => {
 				await runExport();
 				break;
 			}
+			case "verify": {
+				const { runVerify } = await import("$src/verify");
+
+				await runVerify();
+				break;
+			}
 			case "status": {
 				const { runStatus } = await import("$src/status");
 
@@ -128,14 +137,19 @@ const main = async () => {
 		}
 	} finally {
 		if (telemetry) await telemetry.shutdownTelemetry();
+
+		// Every db-backed command exits cleanly by closing the pool — Railway's cron skips
+		// overlapping runs, so the process must terminate to free the next scheduled tick. The
+		// import is dynamic so offline commands never initialize the client.
+		if (command && !OFFLINE_COMMANDS.has(command)) {
+			const { pool } = await import("@prompt-battle/db");
+
+			await pool.end();
+		}
 	}
 };
 
-// Every command exits cleanly by closing the pool — Railway's cron skips overlapping runs,
-// so the process must terminate to free the next scheduled tick.
-main()
-	.catch((error) => {
-		console.error(error);
-		process.exitCode = 1;
-	})
-	.finally(() => pool.end());
+main().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

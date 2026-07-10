@@ -19,8 +19,8 @@ outcome is hash-committed before judging so the result is independently auditabl
 
 Three Bun workspace packages: `db` (Drizzle schema + Postgres client), `worker` (the CLI that
 runs a contest: create → ingest → dq → score → cluster → advance → publish → export, plus
-reset / delete / status / smoke), and `web` (SvelteKit site that renders contest state
-read-only).
+reset / delete / status / smoke / verify), and `web` (SvelteKit site that renders contest
+state read-only).
 `worker` and `web` both depend on `db`; `db` depends on neither.
 
 ## Essential documents — the map

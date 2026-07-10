@@ -47,6 +47,21 @@ pinned prompt or panel in place — changing them requires deleting the contest
 
 ---
 
+## Running the checks
+
+Each check below can be performed by hand from the audit bundle, but a first-party checker
+ships in this repo and runs all six offline:
+
+```
+bun run worker verify --file <path to the audit bundle>
+```
+
+It needs no database and no API keys, prints the bundle's SHA-256 and a per-check verdict,
+and exits nonzero on any failure. It is a convenience, not the guarantee — it reuses the same
+pure functions the engine ran ([verify-bundle.ts](worker/src/utilities/verify-bundle.ts)), so
+a skeptic should audit that code or reimplement the formulas below independently; either path
+must reach the same answers.
+
 ## Check 1 — The judges and their instructions
 
 **Check:** hash the two prompt templates and compare to the committed hashes shown on
@@ -220,6 +235,7 @@ overridden.
 | Rules (the contract)              | [rules.md](rules.md)                                                                                                                                                             |
 | Committed hashes + reveal         | `/rules` on the contest site                                                                                                                                                     |
 | Audit bundle (offline record)     | `/audit/<videoId>.json` on the site, once published + exported (also in `web/static/audit/`)                                                                                     |
+| First-party checker               | `bun run worker verify --file <bundle>` ([verify-bundle.ts](worker/src/utilities/verify-bundle.ts))                                                                              |
 | Prompt templates                  | [prompts/](prompts/)                                                                                                                                                             |
 | Default panel                     | [config.json](config.json)                                                                                                                                                       |
 | Hashing / fingerprint code        | [worker/src/utilities/keywords.ts](worker/src/utilities/keywords.ts), [contest-config.ts](worker/src/utilities/contest-config.ts), [bracket.ts](worker/src/utilities/bracket.ts) |

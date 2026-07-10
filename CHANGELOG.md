@@ -11,7 +11,7 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — The downloadable audit bundle
+## Current — The downloadable audit bundle and its first-party verifier
 
 Built the last unbuilt piece of the trust model: `worker export --contest <id>` serializes a
 published contest's complete record into one JSON file — the frozen config (with the
@@ -42,6 +42,24 @@ The design decisions, in the order they mattered:
 `status` now points a published contest at `export` as its next step. The pure builder lives
 in `worker/src/utilities/audit-bundle.ts` (unit-tested for determinism, ordering, redaction,
 and cross-contest referential integrity); the service and CLI are thin wrappers around it.
+
+The bundle's counterpart is `worker verify --file <bundle>` — a first-party checker that runs
+all six verification.md checks offline, needing no `DATABASE_URL` or API keys (the CLI now
+imports the db pool per command so offline commands never initialize the client). It reuses
+the engine's own pure functions — `parseContestConfig` (hash self-validation), the keyword
+commitment, `classifyComment` mechanical eligibility, `aggregateTotals`/`rankEntries`/
+`bracketFingerprint`, the similarity-input fingerprint and penalty formula, and a full
+`seedOrder`/both-orderings bracket replay — and exits nonzero on any failure. A verifier
+shipped by the operator can't prove honesty by itself; it's the convenience path, auditable
+in one file, with verification.md remaining the independent spec.
+
+The verifier immediately earned its keep: run against the dry-run contest's exported bundle,
+it caught that the stored similarity fingerprint no longer re-derives — the contest predated
+Phase 23's payload change (`publishedAt` → `precedenceAt`), exactly the drift the Phase 23
+note warned about (checks 1–4 and 6 passed; check 5 failed on the fingerprint). Rather than
+re-run the bracket to regenerate a consistent record, the dry-run contest and its bundle were
+torn down once they'd served their purpose; the verifier's tests run against a synthetic
+full-pipeline fixture, which any contest run on current code must match by passing all six.
 
 ## Phase 24 — Similarity thresholds tuned against a probed copy gradient
 
@@ -437,7 +455,5 @@ until the pass is complete for the current scored field.
 
 ## Not yet done
 
-- Publishing the audit bundle for the public record (the embargo + `publish` flag exist; the
-  export of entries/scores/decisions does not).
 - Web service deployment (the `ingest --due` Railway cron is live; the public web app is not
   yet deployed).
