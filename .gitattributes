@@ -1,0 +1,3 @@
+# Audit bundles are hash-anchored artifacts: every checkout must reproduce the exact exported
+# bytes, so line-ending conversion is forbidden (CRLF rewriting would change their SHA-256).
+web/static/audit/*.json -text
