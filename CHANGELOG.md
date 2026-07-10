@@ -52,8 +52,9 @@ and the web's hand-mirrored copy) all switched from `publishedAt` to it, and rul
 carries a loud §2 warning, because the rule has one sharp edge the API makes unavoidable:
 YouTube exposes no revision history, so a typo fix after being copied genuinely hands the
 copier precedence. That failure needs the victim's voluntary edit; the old one needed only
-the attacker's. A stronger fix — interim captures during the entry week to build our own
-revision history — is recorded under "Not yet done."
+the attacker's — a residual edge we accept, since guarding it would require interim captures
+during the entry week (periodic text hashes for our own revision history), which we decided
+against for the added complexity.
 
 Note: the fingerprint payload key changed (`publishedAt` → `precedenceAt`), so this must not
 be deployed mid-contest — an in-flight contest's stored similarity fingerprint would no
@@ -404,9 +405,7 @@ until the pass is complete for the current scored field.
 
 ## Not yet done
 
-- A real end-to-end dry run on a small video, writing live rows (in progress).
 - Publishing the audit bundle for the public record (the embargo + `publish` flag exist; the
   export of entries/scores/decisions does not).
-- Deployment (Railway web service + the `ingest --due` cron).
-- Interim captures during the entry week (periodic text hashes) to establish true first
-  authorship regardless of edits — would soften reset-on-edit's typo-fix edge case.
+- Web service deployment (the `ingest --due` Railway cron is live; the public web app is not
+  yet deployed).
