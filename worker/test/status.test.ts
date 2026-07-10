@@ -43,7 +43,7 @@ describe("nextStep", () => {
 		expect(nextStep("snapshotted", false)).toContain("score");
 		expect(nextStep("scored", false)).toContain("advance");
 		expect(nextStep("complete", false)).toContain("publish");
-		expect(nextStep("complete", true)).toContain("complete");
+		expect(nextStep("complete", true)).toContain("export");
 	});
 });
 

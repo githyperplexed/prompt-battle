@@ -11,7 +11,39 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — Similarity thresholds tuned against a probed copy gradient
+## Current — The downloadable audit bundle
+
+Built the last unbuilt piece of the trust model: `worker export --contest <id>` serializes a
+published contest's complete record into one JSON file — the frozen config (with the
+post-publish keyword reveal), every entry with its DQ reason and evidence, every per-model
+rubric score with audit metadata, the full similarity record, and every matchup's six
+comparisons — everything the six checks in verification.md need offline.
+
+The design decisions, in the order they mattered:
+
+- **Same embargo, same gate.** The bundle contains everything `publish` protects, so the
+  export refuses to run until `results_published_at` has passed — and additionally refuses a
+  published contest whose config lacks the keyword reveal, rather than exporting an
+  incomplete record.
+- **Byte-deterministic, therefore hashable.** Collections are sorted by stable keys and the
+  serialization deep-sorts every object's keys (audit blobs included), so the same rows
+  always produce identical bytes. The command prints the file's SHA-256 — one hash pins the
+  whole record, and re-exporting unchanged rows is a no-op diff.
+- **Distribution is a git commit.** The file lands in `web/static/audit/<videoId>.json`;
+  static assets bake into the web build, so committing + pushing is what deploys it — and the
+  public commit doubles as the record's timestamp anchor. `/rules` links the bundle only
+  after confirming the deployed file actually exists (a server-side HEAD check), so a
+  published-but-not-yet-exported contest never shows a dead link.
+- **Redaction parity.** `tos`-removed entry bodies are blanked exactly as the site blanks
+  them — the bundle must not become a side channel for withheld text. Embedding vectors stay
+  out (they exist only for `--store-vectors` runs and would dominate the file); the recorded
+  similarities plus the committed config are what Check 5 verifies.
+
+`status` now points a published contest at `export` as its next step. The pure builder lives
+in `worker/src/utilities/audit-bundle.ts` (unit-tested for determinism, ordering, redaction,
+and cross-contest referential integrity); the service and CLI are thin wrappers around it.
+
+## Phase 24 — Similarity thresholds tuned against a probed copy gradient
 
 Probed the near-duplicate gates with a planted field run through the real pipeline pieces
 (normalize → embed → cluster): an original, synonym-swapped copies at increasing cadence

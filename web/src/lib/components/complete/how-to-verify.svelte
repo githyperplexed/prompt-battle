@@ -142,6 +142,25 @@
 		)}
 	</div>
 
+	{#if verification.auditBundleUrl}
+		<div class="flex flex-col gap-3 rounded-card border border-line bg-card p-5">
+			{@render head(5, "The complete record", "Downloadable now", true)}
+			<p class="m-0 text-sm leading-relaxed text-mut">
+				Every check above can be run offline from a single file: the frozen config, the revealed
+				keywords and salt, every captured entry with its disqualification reason, every per-model
+				rubric score, the full near-duplicate record, and every bracket vote. Archive it — the
+				record no longer depends on this site.
+			</p>
+			<a
+				class="self-start rounded-control border border-line bg-bg2 px-3.5 py-2 text-sm font-medium text-acc hover:border-line2"
+				href={verification.auditBundleUrl}
+				download
+			>
+				Download the audit bundle →
+			</a>
+		</div>
+	{/if}
+
 	<p class="text-sm leading-relaxed text-dim text-pretty">
 		<b class="font-semibold text-mut">On reproducibility:</b> hosted models can change behind a
 		slug, so re-running the judges is not promised to give identical scores. What is verifiable is

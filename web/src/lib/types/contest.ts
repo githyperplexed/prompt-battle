@@ -114,6 +114,10 @@ export type VerificationData = {
 	revealedKeywords: string[] | null;
 	revealedSalt: string | null;
 	fingerprint: string | null;
+	videoId: string;
+	// Site-relative URL of the exported audit bundle. Null until results are published AND the
+	// bundle file has actually been exported and deployed — never a dead link.
+	auditBundleUrl: string | null;
 	judgeSettings: { key: string; value: string }[];
 	similarity: {
 		enabled: boolean;

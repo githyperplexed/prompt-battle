@@ -11,5 +11,8 @@ build
 # Drizzle-generated migrations + metadata
 db/drizzle
 
+# Generated audit bundles — byte-determinism is the point; reformatting would break their hash
+web/static/audit
+
 # Human-authored doc — keep manual formatting (tables, emphasis)
 rules.md

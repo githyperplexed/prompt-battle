@@ -16,7 +16,8 @@ panel, the exact judge prompt text, the judge request settings, the similarity (
 configuration, and the hidden keywords — is frozen into the contest record, most of it as
 SHA-256 commitments. After the contest, the full decision log is published: every captured
 comment, every disqualification reason, every per-model rubric score, every bracket vote, and
-the revealed keywords + salt.
+the revealed keywords + salt — browsable on the site and downloadable as a single audit-bundle
+file (see [Limits](#limits--what-is-not-promised) for where it lives).
 
 **Why:** with the inputs committed _before_ judging and the decisions recorded _during_ it,
 anyone can confirm the two ends meet in the middle — that the published winner follows
@@ -202,9 +203,15 @@ overridden.
   is recorded to make anomalies visible.
 - **Moderation and affiliation are judgment calls.** They are disclosed (with operator notes
   where manual), but they are not mechanically recomputable the way length or keywords are.
-- **The commitments live in the contest database record** and surface on `/rules`. Until the
-  full audit-bundle export ships (see RUNBOOK.md, "Still to build"), the public site is the
-  interface to the published record.
+- **The authoritative record lives in the contest database** and surfaces on `/rules`. Once
+  results are published, the operator exports the **audit bundle** — one deterministic JSON
+  file (`/audit/<videoId>.json` on the site, committed to this repo under `web/static/audit/`)
+  containing everything the six checks need offline: the frozen config, the revealed
+  keywords + salt, every entry with its disqualification reason, every per-model score, the
+  full similarity record, and every bracket vote, all with their audit metadata. The export is
+  byte-deterministic, so the file has a single SHA-256 anyone can compare against an archived
+  copy; the git commit that adds it is the public timestamp. Content-policy-removed entry
+  bodies are blanked in the bundle exactly as on the site.
 
 ## Quick reference — where things live
 
@@ -212,6 +219,7 @@ overridden.
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rules (the contract)              | [rules.md](rules.md)                                                                                                                                                             |
 | Committed hashes + reveal         | `/rules` on the contest site                                                                                                                                                     |
+| Audit bundle (offline record)     | `/audit/<videoId>.json` on the site, once published + exported (also in `web/static/audit/`)                                                                                     |
 | Prompt templates                  | [prompts/](prompts/)                                                                                                                                                             |
 | Default panel                     | [config.json](config.json)                                                                                                                                                       |
 | Hashing / fingerprint code        | [worker/src/utilities/keywords.ts](worker/src/utilities/keywords.ts), [contest-config.ts](worker/src/utilities/contest-config.ts), [bracket.ts](worker/src/utilities/bracket.ts) |

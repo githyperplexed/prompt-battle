@@ -16,6 +16,7 @@ const COMMANDS = [
 	"reset",
 	"delete",
 	"publish",
+	"export",
 	"status",
 	"smoke",
 	"judge"
@@ -95,6 +96,12 @@ const main = async () => {
 				const { runPublish } = await import("$src/publish");
 
 				await runPublish();
+				break;
+			}
+			case "export": {
+				const { runExport } = await import("$src/export");
+
+				await runExport();
 				break;
 			}
 			case "status": {

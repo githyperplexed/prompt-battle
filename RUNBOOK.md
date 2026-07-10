@@ -346,15 +346,35 @@ re-derive the committed keyword hash, and it surfaces on `/rules`. The secret is
 the committed hash first; a reveal that would not re-derive the published hash is refused.
 `--unpublish` strips the revealed keywords again.
 
-Still to build: export the full audit bundle for the public record —
+### 7. Export the audit bundle ✅
 
-- contest config (`panel`, prompt hashes/text, keyword hash, judge request settings);
-- revealed keywords and salt;
-- captured entries and disqualification reasons;
-- per-model scores with usage/finish metadata;
-- matchup decisions with usage/finish metadata;
-- similarity config, clusters, nearest-earlier links, similarities, and originality penalties;
-- bracket fingerprint and winner.
+```
+bun run worker export --contest <id>                  # requires published results
+bun run worker export --contest <id> --out <path>     # write elsewhere (default below)
+```
+
+Exports the complete public record as one deterministic JSON file — everything a third party
+needs to run all six checks in `verification.md` offline: the frozen config (panel, prompt
+text + hashes, keyword hash, judge request settings, similarity config), the revealed
+keywords + salt, every captured entry with its disqualification reason, per-model scores with
+usage/finish metadata, the full similarity record, every matchup's comparisons with metadata,
+and the bracket fingerprint + winner. Embedding vectors are excluded (they exist only for
+`--store-vectors` runs and would dominate the file's size).
+
+The export **refuses to run until results are published** — the bundle contains everything
+the embargo protects. A refused export exits nonzero. Content-policy (`tos`) entry bodies are
+blanked in the bundle exactly as they are on the site.
+
+By default the file is written to `web/static/audit/<videoId>.json` and the command prints
+its SHA-256. **Then commit and push the file** — static assets are baked into the web build,
+so the commit is what deploys it (`/audit/<videoId>.json`), and the public git history is
+what anchors the record: after that commit, the record cannot be quietly rewritten. `/rules`
+links the bundle automatically once the deployed file exists. Re-running the export on
+unchanged rows reproduces the identical bytes, so a clean re-export is a no-op diff.
+
+Publishing the exported hash somewhere you cannot edit (the reveal video's description, a
+pinned comment) strengthens the anchor further — anyone can then verify the served file
+against it.
 
 ## Smoke test (optional)
 

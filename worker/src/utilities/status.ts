@@ -51,7 +51,7 @@ export const nextStep = (status: string, published: boolean): string => {
 			return "cluster --contest <id>, then advance --contest <id>";
 		case "complete":
 			return published
-				? "results published — pipeline complete"
+				? "export --contest <id>  (then commit + push the bundle)"
 				: "publish --contest <id>  (when the reveal goes live)";
 		default:
 			return "—";

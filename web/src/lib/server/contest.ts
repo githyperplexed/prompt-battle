@@ -66,6 +66,7 @@ const panelIdsOf = (config: unknown): string[] =>
 	(config as ContestConfigShape | null)?.panel?.map((model) => model.id) ?? [];
 
 const buildVerification = (
+	videoId: string,
 	config: ContestConfigShape | null,
 	fingerprint: string | null,
 	resultsPublishedAt: Date | null
@@ -84,6 +85,10 @@ const buildVerification = (
 		revealedKeywords: published ? (config?.revealed?.keywords ?? null) : null,
 		revealedSalt: published ? (config?.revealed?.salt ?? null) : null,
 		fingerprint,
+		videoId,
+		// Filled by the /rules load after it confirms the static file exists; the server layer only
+		// knows whether the bundle is *allowed* to be public, not whether it has been deployed.
+		auditBundleUrl: null,
 		judgeSettings: [
 			{ key: "max retries", value: String(settings?.maxRetries ?? "–") },
 			{ key: "sampling", value: settings?.sampling ?? "–" },
@@ -114,6 +119,7 @@ export const loadActiveVerification = async (): Promise<VerificationData | null>
 	if (!contest) return null;
 
 	return buildVerification(
+		contest.videoId,
 		(contest.config ?? null) as ContestConfigShape | null,
 		contest.bracketFingerprint,
 		contest.resultsPublishedAt
