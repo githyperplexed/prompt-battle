@@ -24,6 +24,10 @@
 	<div class="text-sm text-mut">
 		Open-source · independently verifiable contest.
 		<a class="font-medium text-acc" href="/rules">Read the rules & integrity hashes →</a>
+		<div class="mt-1.5 flex gap-3.5 text-xs text-dim">
+			<a class="hover:text-mut" href="/privacy">Privacy</a>
+			<a class="hover:text-mut" href="/terms">Terms</a>
+		</div>
 	</div>
 
 	{#if fingerprint}

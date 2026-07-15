@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Posts to the hyperplexed.io list endpoint — this site stores nothing. The hidden "name"
+	// Posts to the hyperplexed.io list endpoint; this site stores nothing. The hidden "name"
 	// field and the submit-time floor are the bot checks that endpoint expects.
 	const ENDPOINT = "https://hyperplexed.io/api/sub";
 
@@ -36,11 +36,11 @@
 <div class="rounded-card border border-line bg-card p-6 shadow-card">
 	<h2 class="m-0 mb-1 text-lg font-semibold">Get contest updates</h2>
 	<p class="m-0 mb-4 text-sm leading-relaxed text-mut">
-		New contests, entry deadlines, and results reveals — nothing else.
+		New contests, entry deadlines, and results reveals.
 	</p>
 
 	{#if status === "done"}
-		<p class="m-0 text-sm font-medium text-acc">Subscribed — check your inbox.</p>
+		<p class="m-0 text-sm font-medium text-acc">Subscribed! Check your inbox.</p>
 	{:else}
 		<form class="flex flex-wrap gap-2.5" onsubmit={subscribe}>
 			<input
@@ -72,7 +72,7 @@
 		</form>
 
 		{#if status === "error"}
-			<p class="m-0 mt-2 text-sm text-mut">Something went wrong — try again in a minute.</p>
+			<p class="m-0 mt-2 text-sm text-mut">Something went wrong. Try again in a minute.</p>
 		{/if}
 
 		<p class="m-0 mt-3 text-xs leading-relaxed text-dim">
