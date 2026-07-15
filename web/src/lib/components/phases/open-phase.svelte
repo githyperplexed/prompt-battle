@@ -3,6 +3,7 @@
 	import HowJudgingWorks from "$lib/components/open/how-judging-works.svelte";
 	import HowToEnter from "$lib/components/open/how-to-enter.svelte";
 	import SnapshotPending from "$lib/components/open/snapshot-pending.svelte";
+	import Subscribe from "$lib/components/shell/subscribe.svelte";
 	import type { ContestMeta } from "$lib/types/contest";
 
 	import PhaseIntro from "./phase-intro.svelte";
@@ -38,4 +39,6 @@
 		<HowToEnter />
 		<HowJudgingWorks panel={contest.panel} />
 	</div>
+
+	<Subscribe />
 </section>
