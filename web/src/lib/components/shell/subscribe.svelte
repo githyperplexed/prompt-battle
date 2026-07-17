@@ -1,22 +1,37 @@
 <script lang="ts">
-	// Posts to the hyperplexed.io list endpoint; this site stores nothing. The hidden "name"
-	// field and the submit-time floor are the bot checks that endpoint expects.
+	// Posts to the hyperplexed.io list endpoint; this site stores nothing. That endpoint's bot
+	// checks expect the hidden "name" field to stay empty and the timestamp to be at least 1s
+	// and at most 30min old, and it uses double opt-in: the address only joins the list once
+	// the emailed confirmation link is clicked.
 	const ENDPOINT = "https://hyperplexed.io/api/sub";
+
+	const MIN_FILL_MS = 1000;
+	const STALE_MS = 25 * 60 * 1000;
 
 	let email = $state("");
 	let honeypot = $state("");
 	let status = $state<"idle" | "sending" | "done" | "error">("idle");
 
-	const loadedAt = Date.now();
+	let loadedAt = Date.now();
+
+	const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 	const subscribe = async (event: SubmitEvent) => {
 		event.preventDefault();
 
-		if (status === "sending" || honeypot || Date.now() - loadedAt < 1000) return;
+		if (status === "sending" || honeypot || Date.now() - loadedAt < MIN_FILL_MS) return;
 
 		status = "sending";
 
 		try {
+			// If the tab idled past the endpoint's staleness window, restamp and wait out the
+			// fill floor so the submission isn't rejected as a bot.
+			if (Date.now() - loadedAt > STALE_MS) {
+				loadedAt = Date.now();
+
+				await sleep(MIN_FILL_MS + 100);
+			}
+
 			const response = await fetch(ENDPOINT, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -40,7 +55,9 @@
 	</p>
 
 	{#if status === "done"}
-		<p class="m-0 text-sm font-medium text-acc">Subscribed! Check your inbox.</p>
+		<p class="m-0 text-sm font-medium text-acc">
+			Email sent! Check your inbox for the confirmation link.
+		</p>
 	{:else}
 		<form class="flex flex-wrap gap-2.5" onsubmit={subscribe}>
 			<input
