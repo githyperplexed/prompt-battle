@@ -1,10 +1,17 @@
 import Bottleneck from "bottleneck";
 import { z } from "zod";
 
+import { packBatches } from "$src/utilities/batching";
+
 const MODERATION_URL = "https://api.openai.com/v1/moderations";
-const CHUNK = 50;
-const MAX_ATTEMPTS = 4;
-const MAX_RETRY_AFTER_MS = 30_000;
+// omni-moderation is capped at 10,000 tokens/min on OpenAI's tier 1. 6,000 chars is
+// ~1,500–3,000 tokens even for token-dense text, so 3 batches/min stays under the cap
+// with headroom; a batch above the cap would never succeed no matter the retries.
+const MAX_BATCH_CHARS = 6_000;
+const MAX_BATCH_COUNT = 50;
+const BATCH_INTERVAL_MS = 20_000;
+const MAX_ATTEMPTS = 5;
+const MAX_RETRY_AFTER_MS = 90_000;
 
 const responseSchema = z.object({
 	results: z.array(z.object({ flagged: z.boolean() }))
@@ -28,12 +35,14 @@ const parseRetryAfter = (value: string | null): number | null => {
 
 const shouldRetry = (status: number): boolean => status === 429 || status >= 500;
 
+// Without a Retry-After header the delay must be able to outlast a full per-minute
+// rate-limit window, or every retry lands inside the same exhausted window.
 const retryDelay = (attempt: number, retryAfter: string | null): number => {
 	const serverDelay = parseRetryAfter(retryAfter);
 
 	if (serverDelay !== null) return serverDelay;
 
-	return Math.min(500 * 2 ** (attempt - 1), 8_000);
+	return Math.min(15_000 * 2 ** (attempt - 1), MAX_RETRY_AFTER_MS);
 };
 
 const getApiKey = (): string => {
@@ -79,14 +88,12 @@ const moderateBatch = async (texts: string[], apiKey: string): Promise<boolean[]
 // request count down.
 export const flagViolations = async (texts: string[]): Promise<boolean[]> => {
 	const apiKey = getApiKey();
-	const limiter = new Bottleneck({ maxConcurrent: 1, minTime: 1000 });
+	const limiter = new Bottleneck({ maxConcurrent: 1, minTime: BATCH_INTERVAL_MS });
 	const flags: boolean[] = [];
 
 	try {
-		for (let i = 0; i < texts.length; i += CHUNK) {
-			const batchFlags = await limiter.schedule(() =>
-				moderateBatch(texts.slice(i, i + CHUNK), apiKey)
-			);
+		for (const batch of packBatches(texts, MAX_BATCH_CHARS, MAX_BATCH_COUNT)) {
+			const batchFlags = await limiter.schedule(() => moderateBatch(batch, apiKey));
 
 			flags.push(...batchFlags);
 		}
