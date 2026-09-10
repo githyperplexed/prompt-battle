@@ -1,0 +1,13 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "prompt-battle",
+	"compatibility_date": "2026-09-10",
+	// Cutover: once the Railway CNAME for battle.hyperplexed.io is removed from Cloudflare DNS,
+	// uncomment this and redeploy — wrangler creates the DNS record and certificate itself.
+	// "routes": [{ "pattern": "battle.hyperplexed.io", "custom_domain": true }],
+	// Assets only — no Worker script runs, so requests never count as invocations.
+	"assets": {
+		"directory": "./build",
+		"not_found_handling": "404-page"
+	}
+}

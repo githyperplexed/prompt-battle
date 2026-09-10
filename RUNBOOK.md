@@ -366,11 +366,23 @@ the embargo protects. A refused export exits nonzero. Content-policy (`tos`) ent
 blanked in the bundle exactly as they are on the site.
 
 By default the file is written to `web/static/audit/<videoId>.json` and the command prints
-its SHA-256. **Then commit and push the file** — static assets are baked into the web build,
-so the commit is what deploys it (`/audit/<videoId>.json`), and the public git history is
-what anchors the record: after that commit, the record cannot be quietly rewritten. `/rules`
-links the bundle automatically once the deployed file exists. Re-running the export on
+its SHA-256. **Then commit and push the file** — the public git history is what anchors the
+record: after that commit, the record cannot be quietly rewritten. Re-running the export on
 unchanged rows reproduces the identical bytes, so a clean re-export is a no-op diff.
+
+The site is built from that file. Set `VIDEO_ID` in `web/src/lib/contest.js` to the contest
+being published, then deploy:
+
+```
+bun run web:deploy
+```
+
+That prerenders every page from the bundle (results, bracket, every entry, the `/rules`
+verification data and the bundle's SHA-256) and uploads the `web/build` directory to
+Cloudflare Workers as static assets (`web/wrangler.jsonc`; needs a one-time
+`bunx wrangler login`). The bundle itself is served at `/audit/<videoId>.json`. Nothing on the
+site is read at request time, so there is no server or database to keep running between
+contests.
 
 Publishing the exported hash somewhere you cannot edit (the reveal video's description, a
 pinned comment) strengthens the anchor further — anyone can then verify the served file

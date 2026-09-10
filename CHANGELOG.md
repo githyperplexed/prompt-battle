@@ -11,7 +11,42 @@ game and `RUNBOOK.md` for how to run it.
 
 ---
 
-## Current — The downloadable audit bundle and its first-party verifier
+## Current — The static results site
+
+With the contest over, the deployed web app (SvelteKit on adapter-node, a Postgres reader,
+both on Railway) was paying for a server and a 50 GB database volume to serve what had
+become a fixed record. The site was rebuilt as a fully static package and moved to Cloudflare
+Workers static assets; the live-contest UI was preserved on the `legacy` branch.
+
+The design decisions:
+
+- **The audit bundle is the site's only input.** `web/src/lib/server/results.ts` reads the
+  committed `web/static/audit/<videoId>.json` at build time and derives everything the pages
+  show — the champion, the seeded bracket with every judge's votes, all 313 ranked entries
+  with per-judge totals and penalties, the 284 disqualifications with reasons, and the
+  `/rules` verification data including the bundle's own SHA-256. The site therefore cannot
+  disagree with the public record, and it needs no database even to build.
+- **No client-side JavaScript.** Every route is prerendered and `csr = false`, so the
+  framework ships nothing to the browser and page data is never serialized into the HTML for
+  hydration (which would have doubled the page). Expand/collapse is native `<details>`; the
+  subscribe form is one 2 KB plain script. The whole results page is one ~1 MB HTML file,
+  ~200 KB compressed.
+- **Assets-only Worker.** `web/wrangler.jsonc` declares only an assets directory (no `main`),
+  so requests are served from Cloudflare's asset store without a Worker invocation.
+  `bun run web:deploy` builds and uploads.
+- **Monochrome.** Black ground, white ink, a short grey ramp, Lexend + Space Mono — no
+  accent color, no gradients. The champion is set apart by scale and position, not color.
+- **The winner is the bracket winner.** The leaderboard is ordered by absolute score with
+  the champion at the top; each row also shows how far the entry got in the bracket, since
+  the bracket, not the score, decides the winner under rules.md. (In this contest the two
+  coincided: rank 1 and seed 1 won.)
+
+Removed from `web`: the `db` dependency, adapter-node, all phase/embargo gating, and the
+live-contest components. Untouched: `worker`, `db`, and the audit/verify pipeline, so a
+future contest runs exactly as before and publishes by exporting a new bundle and
+redeploying.
+
+## Phase 25 — The downloadable audit bundle and its first-party verifier
 
 Built the last unbuilt piece of the trust model: `worker export --contest <id>` serializes a
 published contest's complete record into one JSON file — the frozen config (with the

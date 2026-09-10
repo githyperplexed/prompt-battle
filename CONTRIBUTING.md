@@ -11,8 +11,8 @@ guidelines. Any contributor, human or LLM, should follow these.
 - **Monorepo (Bun workspaces).** Three top-level packages:
   - `db` — shared Drizzle schema + Postgres client.
   - `worker` — Bun CLI (ingest / score / advance).
-  - `web` — SvelteKit UI.
-  - `worker` and `web` both depend on `db`. `db` depends on neither.
+  - `web` — static SvelteKit results site, prerendered from the exported audit bundle.
+  - `worker` depends on `db`. `web` and `db` depend on nothing in the workspace.
 
 ## Formatting (automated — don't hand-format)
 
@@ -50,8 +50,12 @@ print width.** Don't fight it by hand.
 ## Stack conventions
 
 - SvelteKit 5 (runes mode); Tailwind CSS v4 via the `@tailwindcss/vite` plugin (not
-  PostCSS); TypeScript strict; Drizzle ORM + PostgreSQL; Vitest for tests; `adapter-node`
-  for deploy (kept in `devDependencies` — it's a build-time tool).
+  PostCSS); TypeScript strict; Drizzle ORM + PostgreSQL (worker only); Vitest for tests;
+  `adapter-static` with every route prerendered and `csr = false`, deployed as Cloudflare
+  Workers static assets via `wrangler` (both kept in `devDependencies` — build-time tools).
+- The site reads the audit bundle at build time only (`web/src/lib/server/results.ts`); page
+  data never reaches a browser as JSON, so keep the site free of client-side state. The one
+  script is `web/static/subscribe.js`.
 - `vitePreprocess()` is not needed with `@sveltejs/vite-plugin-svelte` v6+.
 - Verify packages and patterns are current best practice before adding them.
 

@@ -19,9 +19,12 @@ outcome is hash-committed before judging so the result is independently auditabl
 
 Three Bun workspace packages: `db` (Drizzle schema + Postgres client), `worker` (the CLI that
 runs a contest: create → ingest → dq → score → cluster → advance → publish → export, plus
-reset / delete / status / smoke / verify), and `web` (SvelteKit site that renders contest
-state read-only).
-`worker` and `web` both depend on `db`; `db` depends on neither.
+reset / delete / status / smoke / verify), and `web` (a fully static SvelteKit site that
+prerenders the final results from the exported audit bundle in `web/static/audit/` — no
+database, no server, no client-side JavaScript beyond the subscribe form; deployed to
+Cloudflare Workers static assets with `bun run web:deploy`).
+`worker` depends on `db`; `web` depends on neither. The live-contest web UI (phase stepper,
+embargo gating, database reads) lives on the `legacy` branch.
 
 ## Essential documents — the map
 
@@ -59,5 +62,6 @@ formula) verification.md — in the same change.
   finished work via unique constraints. Refused operations (`reset`/`publish`/`dq` in the
   wrong phase) exit nonzero.
 - **Embargo:** finishing a bracket does not publish it. `publish` lifts the embargo (and
-  reveals the keywords); `reset` re-embargoes. The web gates everything server-side on
-  `results_published_at <= now`.
+  reveals the keywords); `reset` re-embargoes. `export` refuses to run until the embargo has
+  lifted, and the static site is built only from exported bundles, so nothing embargoed can
+  reach the site.

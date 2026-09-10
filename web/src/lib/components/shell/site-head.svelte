@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from "$app/state";
 
-	import { CONTEST_TITLE } from "$lib/utilities/copy";
+	import { CONTEST_TITLE } from "$lib/contest.js";
 
 	let { title, description }: { title: string; description: string } = $props();
 
-	const canonical = $derived(page.url.origin + page.url.pathname);
-	const ogImage = $derived(page.url.origin + "/og.png");
+	const canonical = page.url.origin + page.url.pathname;
+	const ogImage = page.url.origin + "/og.png";
 </script>
 
 <svelte:head>

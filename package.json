@@ -19,7 +19,8 @@
 		"worker": "bun worker/src/cli.ts",
 		"web:dev": "bun run --filter @prompt-battle/web dev",
 		"web:build": "bun run --filter @prompt-battle/web build",
-		"web:check": "bun run --filter @prompt-battle/web check"
+		"web:check": "bun run --filter @prompt-battle/web check",
+		"web:deploy": "bun run --filter @prompt-battle/web deploy"
 	},
 	"devDependencies": {
 		"prettier": "^3.8.4",

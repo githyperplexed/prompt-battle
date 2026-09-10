@@ -22,3 +22,6 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+# Wrangler local state
+.wrangler/

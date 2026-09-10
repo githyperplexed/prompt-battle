@@ -1,45 +1,25 @@
 @import "tailwindcss";
 
-/* Neutral dark competition theme. Gold (`acc`) is the single saturated accent; the
-   purple/magenta pair (`g1`/`g2`) is used only for the ambient page-top glow. */
+/* Monochrome: pure black ground, white ink, and a short grey ramp. No accent color. */
 @theme {
 	--font-sans: "Lexend", ui-sans-serif, system-ui, sans-serif;
 	--font-mono: "Space Mono", ui-monospace, monospace;
 
-	--color-bg: #0a0a0a;
-	--color-bg2: #171717;
-	--color-card: #1c1c1c;
-	--color-card2: #262626;
-	--color-line: #2e2e2e;
-	--color-line2: #404040;
-	--color-tx: #fafafa;
+	--color-bg: #000000;
+	--color-fg: #ffffff;
 	--color-mut: #a3a3a3;
-	--color-dim: #737373;
-	--color-acc: #f7b71d;
-	--color-accd: #9a6e0c;
-	--color-ink: #2a1d02;
-	--color-g1: #8b3df0;
-	--color-g2: #d6309a;
-	--color-ok: #5fd98a;
-	--color-bad: #fb6f6f;
-	--color-j1: oklch(0.8 0.13 215);
-	--color-j2: oklch(0.72 0.18 350);
-	--color-j3: oklch(0.85 0.18 128);
+	--color-dim: #6b6b6b;
+	--color-line: #262626;
+	--color-line2: #404040;
+	--color-panel: #0a0a0a;
 
-	--radius-card: 13px;
-	--radius-control: 9px;
-	--radius-chip: 7px;
-
-	--container-page: 1080px;
-
-	--shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 16px 32px -26px rgb(0 0 0 / 0.7);
+	--container-page: 960px;
 }
 
 :root {
 	color-scheme: dark;
 }
 
-/* Always reserve the scrollbar gutter so content never shifts when a page gains/loses its scrollbar. */
 html {
 	scrollbar-gutter: stable;
 }
@@ -48,19 +28,21 @@ html,
 body {
 	min-height: 100%;
 	background-color: var(--color-bg);
-	background-image:
-		radial-gradient(
-			940px 480px at 28% -160px,
-			color-mix(in oklch, var(--color-g1), transparent 74%),
-			transparent 72%
-		),
-		radial-gradient(
-			820px 460px at 88% -120px,
-			color-mix(in oklch, var(--color-g2), transparent 78%),
-			transparent 72%
-		);
-	background-repeat: no-repeat;
-	color: var(--color-tx);
+	color: var(--color-fg);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
+}
+
+::selection {
+	background-color: var(--color-fg);
+	color: var(--color-bg);
+}
+
+details > summary {
+	list-style: none;
+	cursor: pointer;
+}
+
+details > summary::-webkit-details-marker {
+	display: none;
 }

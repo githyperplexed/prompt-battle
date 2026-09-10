@@ -1,63 +1,56 @@
 <script lang="ts">
-	import CompletePhase from "$lib/components/phases/complete-phase.svelte";
-	import LockedPhase from "$lib/components/phases/locked-phase.svelte";
-	import OpenPhase from "$lib/components/phases/open-phase.svelte";
-	import ScoredPhase from "$lib/components/phases/scored-phase.svelte";
-	import ScoringPhase from "$lib/components/phases/scoring-phase.svelte";
-	import SnapshotPhase from "$lib/components/phases/snapshot-phase.svelte";
-	import StatusNotice from "$lib/components/phases/status-notice.svelte";
-	import UpcomingPhase from "$lib/components/phases/upcoming-phase.svelte";
-	import ContestShell from "$lib/components/shell/contest-shell.svelte";
+	import Bracket from "$lib/components/results/bracket.svelte";
+	import Champion from "$lib/components/results/champion.svelte";
+	import Disqualified from "$lib/components/results/disqualified.svelte";
+	import Leaderboard from "$lib/components/results/leaderboard.svelte";
+	import Stats from "$lib/components/results/stats.svelte";
+	import SiteFooter from "$lib/components/shell/site-footer.svelte";
 	import SiteHead from "$lib/components/shell/site-head.svelte";
-	import Card from "$lib/components/ui/card.svelte";
-	import { META_DESCRIPTION, pageTitle } from "$lib/utilities/copy";
+	import Subscribe from "$lib/components/shell/subscribe.svelte";
+	import { CONTEST_SUBTITLE, CONTEST_TITLE, META_DESCRIPTION, REPO_URL } from "$lib/contest.js";
 
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
+
+	const link = "border border-line px-4 py-2 text-sm text-mut hover:border-fg hover:text-fg";
+	const videoUrl = $derived(`https://www.youtube.com/watch?v=${data.meta.videoId}`);
 </script>
 
-<SiteHead title={pageTitle(data.state)} description={META_DESCRIPTION} />
+<SiteHead title={`${CONTEST_TITLE} — Final results`} description={META_DESCRIPTION} />
 
-{#if data.state === "not_found" || !data.contest}
-	<StatusNotice
-		tag="404"
-		heading="No contest found"
-		body="We couldn't find a contest to show. Check the link, or head back to the contest index."
-	/>
-{:else if data.state === "draft"}
-	<StatusNotice
-		tag="DRAFT"
-		heading="Contest is being set up"
-		body="This contest hasn't opened yet. Check back soon."
-	/>
-{:else}
-	<ContestShell
-		current={data.view ?? data.state}
-		progress={data.progress ?? data.state}
-		title={data.contest.title}
-		subtitle={data.contest.subtitle}
-		videoId={data.contest.videoId}
-		fingerprint={data.contest.fingerprint}
-	>
-		{#if data.state === "open"}
-			<OpenPhase contest={data.contest} />
-		{:else if data.state === "snapshotted" && data.snapshot && data.entries}
-			<SnapshotPhase contest={data.contest} snapshot={data.snapshot} entries={data.entries} />
-		{:else if data.state === "scoring" && data.scoring && data.entries}
-			<ScoringPhase scoring={data.scoring} entries={data.entries} />
-		{:else if data.state === "scored" && data.leaderboard}
-			<ScoredPhase leaderboard={data.leaderboard} />
-		{:else if data.state === "complete" && data.complete}
-			<CompletePhase complete={data.complete} />
-		{:else if data.state === "locked"}
-			<LockedPhase />
-		{:else if data.state === "upcoming"}
-			<UpcomingPhase phase={data.view ?? data.state} />
-		{:else}
-			<section class="pt-7">
-				<Card class="py-9 text-center text-mut">This phase’s view lands in the next pass.</Card>
-			</section>
-		{/if}
-	</ContestShell>
-{/if}
+<main class="mx-auto w-full max-w-page px-6">
+	<header class="border-b border-line pt-16 pb-12">
+		<p class="m-0 font-mono text-[11px] tracking-[0.3em] text-dim uppercase">
+			Prompt Battle · Final results
+		</p>
+		<h1 class="mt-4 mb-4 text-5xl font-semibold tracking-tight max-sm:text-4xl">
+			{CONTEST_TITLE}
+		</h1>
+		<p class="m-0 max-w-2xl text-base leading-relaxed text-mut">{CONTEST_SUBTITLE}</p>
+
+		<nav class="mt-8 flex flex-wrap gap-2">
+			<a class={link} href={videoUrl} target="_blank" rel="noreferrer">Watch the video ↗</a>
+			<a class={link} href="/rules">Rules &amp; verification</a>
+			<a class={link} href={REPO_URL} target="_blank" rel="noreferrer">Source ↗</a>
+		</nav>
+	</header>
+
+	{#if data.champion}
+		<Champion champion={data.champion} rounds={data.rounds.length} />
+	{/if}
+
+	<Stats stats={data.stats} meta={data.meta} />
+
+	{#if data.rounds.length}
+		<Bracket rounds={data.rounds} />
+	{/if}
+
+	<Leaderboard entries={data.ranked} panel={data.meta.panel} seeded={data.stats.seeded} />
+
+	<Disqualified entries={data.disqualified} stats={data.stats} />
+
+	<Subscribe />
+
+	<SiteFooter fingerprint={data.verification.bracketFingerprint} />
+</main>

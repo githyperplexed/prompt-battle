@@ -1,45 +1,28 @@
 <script lang="ts">
-	let { fingerprint }: { fingerprint: string | null } = $props();
+	import { REPO_URL } from "$lib/contest.js";
 
-	let copied = $state(false);
-	let timer: ReturnType<typeof setTimeout> | undefined;
+	let { fingerprint = null }: { fingerprint?: string | null } = $props();
 
-	const copy = async () => {
-		if (!fingerprint) return;
-
-		try {
-			await navigator.clipboard.writeText(fingerprint);
-			copied = true;
-			clearTimeout(timer);
-			timer = setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable; ignore
-		}
-	};
+	const link = "text-mut underline-offset-4 hover:text-fg hover:underline";
 </script>
 
-<div
-	class="mt-10 mb-12 flex flex-wrap items-center justify-between gap-3.5 border-t border-line pt-5"
->
-	<div class="text-sm text-mut">
-		Open-source · independently verifiable contest.
-		<a class="font-medium text-acc" href="/rules">Read the rules & integrity hashes →</a>
-		<div class="mt-1.5 flex gap-3.5 text-xs text-dim">
-			<a class="hover:text-mut" href="/privacy">Privacy</a>
-			<a class="hover:text-mut" href="/terms">Terms</a>
-		</div>
+<footer class="mt-16 flex flex-col gap-4 border-t border-line pt-6 pb-12 text-sm">
+	<div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+		<a class={link} href="/">Results</a>
+		<a class={link} href="/rules">Rules &amp; verification</a>
+		<a class={link} href={REPO_URL} target="_blank" rel="noreferrer">Source</a>
+		<a class={link} href="/privacy">Privacy</a>
+		<a class={link} href="/terms">Terms</a>
 	</div>
 
+	<p class="m-0 text-xs leading-relaxed text-dim">
+		An open-source, independently verifiable contest. Every decision behind this result is in the
+		public audit record.
+	</p>
+
 	{#if fingerprint}
-		<button
-			type="button"
-			class="flex min-w-0 max-w-full items-center gap-1.5 font-mono text-xs text-dim hover:text-mut"
-			onclick={copy}
-			title="Copy bracket fingerprint"
-		>
-			<span class="flex-none">fingerprint ·</span>
-			<span class="min-w-0 truncate">{fingerprint}</span>
-			<span class="flex-none text-acc">{copied ? "copied" : ""}</span>
-		</button>
+		<p class="m-0 font-mono text-[11px] leading-relaxed break-all text-dim">
+			bracket fingerprint · {fingerprint}
+		</p>
 	{/if}
-</div>
+</footer>

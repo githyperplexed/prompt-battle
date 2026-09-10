@@ -1,11 +1,13 @@
-import adapter from "@sveltejs/adapter-node";
+import adapter from "@sveltejs/adapter-static";
 
-// No preprocessor: @sveltejs/vite-plugin-svelte v6+ handles <script lang="ts"> natively,
-// so vitePreprocess() is not needed.
+import { SITE_URL } from "./src/lib/contest.js";
+
 /** @type {import("@sveltejs/kit").Config} */
 const config = {
 	kit: {
-		adapter: adapter()
+		adapter: adapter({ pages: "build", assets: "build", strict: true }),
+		// Every page is prerendered, so canonical/OG URLs need the real origin at build time.
+		prerender: { origin: SITE_URL }
 	}
 };
 
