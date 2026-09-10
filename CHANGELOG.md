@@ -22,7 +22,7 @@ The design decisions:
 
 - **The audit bundle is the site's only input.** `web/src/lib/server/results.ts` reads the
   committed `web/static/audit/<videoId>.json` at build time and derives everything the pages
-  show — the champion, the seeded bracket with every judge's votes, all 313 ranked entries
+  show — the champion, all 313 ranked entries
   with per-judge totals and penalties, the 284 disqualifications with reasons, and the
   `/rules` verification data including the bundle's own SHA-256. The site therefore cannot
   disagree with the public record, and it needs no database even to build.

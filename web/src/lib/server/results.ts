@@ -5,11 +5,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { VIDEO_ID } from "$lib/contest.js";
-import type { AuditBundle, BundleEntry, BundleMatchup } from "$lib/types/bundle";
+import type { AuditBundle, BundleEntry } from "$lib/types/bundle";
 import type {
-	BracketMatchup,
-	BracketRound,
-	BracketVote,
 	Champion,
 	DisqualifiedEntry,
 	RankedEntry,
@@ -17,7 +14,7 @@ import type {
 	Stats,
 	Verification
 } from "$lib/types/results";
-import { bracketResultLabel, dqLabel, roundLabel } from "$lib/utilities/labels";
+import { bracketResultLabel, dqLabel } from "$lib/utilities/labels";
 
 const BUNDLE_URL = `/audit/${VIDEO_ID}.json`;
 
@@ -54,54 +51,6 @@ const buildStats = (entries: BundleEntry[]): Stats => {
 		seeded: entries.filter((entry) => entry.seed != null).length,
 		dq
 	};
-};
-
-const buildVotes = (matchup: BundleMatchup, panel: string[]): BracketVote[] =>
-	panel.map((judge) => {
-		const aFirst = matchup.comparisons.find((c) => c.modelId === judge && !c.orderSwapped);
-		const bFirst = matchup.comparisons.find((c) => c.modelId === judge && c.orderSwapped);
-		const consistent = !!aFirst && !!bFirst && aFirst.chosenEntryId === bFirst.chosenEntryId;
-
-		if (!consistent) return { judge, pick: "split" };
-
-		return { judge, pick: aFirst!.chosenEntryId === matchup.entryAId ? "a" : "b" };
-	});
-
-const buildRounds = (
-	bundle: AuditBundle,
-	byId: Map<string, BundleEntry>,
-	totalRounds: number
-): BracketRound[] => {
-	const panel = bundle.config.panel.map((judge) => judge.id);
-	const rounds = new Map<number, BracketMatchup[]>();
-
-	for (const m of bundle.matchups) {
-		const a = byId.get(m.entryAId);
-		const b = byId.get(m.entryBId);
-
-		if (!a || !b || a.seed == null || b.seed == null) continue;
-
-		const list = rounds.get(m.round) ?? [];
-
-		list.push({
-			round: m.round,
-			slot: m.slot,
-			a: { id: a.id, seed: a.seed, author: a.authorDisplayName },
-			b: { id: b.id, seed: b.seed, author: b.authorDisplayName },
-			winner: m.winnerId === m.entryAId ? "a" : m.winnerId === m.entryBId ? "b" : null,
-			votes: buildVotes(m, panel)
-		});
-
-		rounds.set(m.round, list);
-	}
-
-	return [...rounds]
-		.sort(([a], [b]) => a - b)
-		.map(([round, matchups]) => ({
-			round,
-			label: roundLabel(round, totalRounds),
-			matchups: matchups.sort((x, y) => x.slot - y.slot)
-		}));
 };
 
 const buildVerification = (bundle: AuditBundle, raw: Buffer): Verification => {
@@ -148,8 +97,6 @@ export const loadResults = (): Results => {
 	const { contest, config, result } = bundle;
 	const panel = config.panel.map((judge) => judge.id);
 	const totalRounds = Math.max(0, ...bundle.matchups.map((m) => m.round));
-	const byId = new Map(bundle.entries.map((entry) => [entry.id, entry]));
-
 	const totalsByEntry = new Map<string, Map<string, number>>();
 
 	for (const score of bundle.scores) {
@@ -191,11 +138,12 @@ export const loadResults = (): Results => {
 		.sort((a, b) => a.rank! - b.rank!)
 		.map(toRanked);
 
-	const winner = result.winnerEntryId ? byId.get(result.winnerEntryId) : undefined;
+	const winner = bundle.entries.find((entry) => entry.id === result.winnerEntryId);
 	const champion: Champion | null = winner
 		? {
 				...toRanked(winner),
-				wins: bundle.matchups.filter((m) => m.winnerId === winner.id).length
+				wins: bundle.matchups.filter((m) => m.winnerId === winner.id).length,
+				rounds: totalRounds
 			}
 		: null;
 
@@ -225,7 +173,6 @@ export const loadResults = (): Results => {
 		},
 		stats: buildStats(bundle.entries),
 		champion,
-		rounds: buildRounds(bundle, byId, totalRounds),
 		ranked,
 		disqualified,
 		verification: buildVerification(bundle, raw)

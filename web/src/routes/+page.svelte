@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Bracket from "$lib/components/results/bracket.svelte";
 	import Champion from "$lib/components/results/champion.svelte";
 	import Disqualified from "$lib/components/results/disqualified.svelte";
 	import Leaderboard from "$lib/components/results/leaderboard.svelte";
@@ -37,14 +36,10 @@
 	</header>
 
 	{#if data.champion}
-		<Champion champion={data.champion} rounds={data.rounds.length} />
+		<Champion champion={data.champion} />
 	{/if}
 
 	<Stats stats={data.stats} meta={data.meta} />
-
-	{#if data.rounds.length}
-		<Bracket rounds={data.rounds} />
-	{/if}
 
 	<Leaderboard entries={data.ranked} panel={data.meta.panel} seeded={data.stats.seeded} />
 

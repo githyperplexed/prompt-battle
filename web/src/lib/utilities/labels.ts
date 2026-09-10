@@ -14,14 +14,6 @@ export const DQ_REASON_LABELS: Record<string, string> = {
 
 export const dqLabel = (reason: string): string => DQ_REASON_LABELS[reason] ?? reason;
 
-export const roundLabel = (round: number, totalRounds: number): string => {
-	if (round === totalRounds) return "Final";
-	if (round === totalRounds - 1) return "Semifinals";
-	if (round === totalRounds - 2) return "Quarterfinals";
-
-	return `Round of ${2 ** (totalRounds - round + 1)}`;
-};
-
 // How far an entry got, as a label for a leaderboard row.
 export const bracketResultLabel = (
 	round: number,

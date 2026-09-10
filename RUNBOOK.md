@@ -377,7 +377,7 @@ being published, then deploy:
 bun run web:deploy
 ```
 
-That prerenders every page from the bundle (results, bracket, every entry, the `/rules`
+That prerenders every page from the bundle (results, every entry, the `/rules`
 verification data and the bundle's SHA-256) and uploads the `web/build` directory to
 Cloudflare Workers as static assets (`web/wrangler.jsonc`; needs a one-time
 `bunx wrangler login`). The bundle itself is served at `/audit/<videoId>.json`. Nothing on the

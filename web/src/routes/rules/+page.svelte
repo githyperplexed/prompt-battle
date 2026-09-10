@@ -146,7 +146,7 @@
 		{@render step(
 			4,
 			"The bracket",
-			"Open any matchup on the results page and recount its votes: each judge compared the two entries twice (A-first and B-first), a vote only counted if the judge picked the same entry both times, the majority won, and a deadlock went to the higher seed. Repeat down to the final.",
+			"Recount the votes of every matchup in the audit bundle: each judge compared the two entries twice (A-first and B-first), a vote only counted if the judge picked the same entry both times, the majority won, and a deadlock went to the higher seed. Repeat down to the final.",
 			"The champion follows from the recorded votes alone — no matchup outcome was overridden."
 		)}
 	</section>

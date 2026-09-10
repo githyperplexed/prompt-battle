@@ -3,7 +3,7 @@
 	import type { Champion } from "$lib/types/results";
 	import { formatScore } from "$lib/utilities/format";
 
-	let { champion, rounds }: { champion: Champion; rounds: number } = $props();
+	let { champion }: { champion: Champion } = $props();
 </script>
 
 <section class="border-b border-line py-12">
@@ -17,7 +17,7 @@
 				</a>
 			</h2>
 			<p class="m-0 mt-2 font-mono text-xs tracking-widest text-mut uppercase">
-				Seed #{champion.seed} · Rank #{champion.rank} · Won {champion.wins} of {rounds} matchups
+				Seed #{champion.seed} · Rank #{champion.rank} · Won {champion.wins} of {champion.rounds} matchups
 			</p>
 		</div>
 

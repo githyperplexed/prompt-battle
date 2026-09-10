@@ -33,7 +33,8 @@ export type RankedEntry = {
 	bracket: BracketResult | null;
 };
 
-export type Champion = RankedEntry & { wins: number };
+// `wins` of `rounds`: a champion of a full bracket won every round it played.
+export type Champion = RankedEntry & { wins: number; rounds: number };
 
 export type DisqualifiedEntry = {
 	id: string;
@@ -53,25 +54,6 @@ export type Stats = {
 	disqualified: number;
 	seeded: number;
 	dq: { reason: string; label: string; count: number }[];
-};
-
-export type BracketEntrant = { id: string; seed: number; author: string };
-
-export type BracketVote = { judge: string; pick: "a" | "b" | "split" };
-
-export type BracketMatchup = {
-	round: number;
-	slot: number;
-	a: BracketEntrant;
-	b: BracketEntrant;
-	winner: "a" | "b" | null;
-	votes: BracketVote[];
-};
-
-export type BracketRound = {
-	round: number;
-	label: string;
-	matchups: BracketMatchup[];
 };
 
 export type Verification = {
@@ -102,7 +84,6 @@ export type Results = {
 	meta: ContestMeta;
 	stats: Stats;
 	champion: Champion | null;
-	rounds: BracketRound[];
 	ranked: RankedEntry[];
 	disqualified: DisqualifiedEntry[];
 	verification: Verification;
